@@ -1,0 +1,478 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MASTER
+  ADMIN
+  CAJERO
+  MESERO
+  BARRA
+  BARMAN
+  COCINA
+  DJ
+}
+
+enum EstadoMesa {
+  LIBRE
+  OCUPADA
+  PIDIENDO
+  RESERVADA
+}
+
+enum EstadoPedido {
+  RECIBIDO
+  EN_PREPARACION
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum ModoEntrega {
+  MESA
+  PICKUP
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  PSE
+  NEQUI
+  DAVIPLATA
+  TRANSFERENCIA
+  WOMPI
+}
+
+enum EstadoFactura {
+  EMITIDA
+  VALIDADA
+  FIRMADA
+  ENTREGADA
+  RECHAZADA
+}
+
+enum EstadoCancion {
+  PENDIENTE
+  SONANDO
+  YA_PUESTA
+}
+
+enum NivelCliente {
+  BRONCE
+  PLATA
+  ORO
+  BLACK
+}
+
+enum TipoMovimiento {
+  VENTA
+  COMPRA
+  MERMA
+  AJUSTE
+  DEVOLUCION
+}
+
+model Tenant {
+  id                String    @id @default(cuid())
+  nombre            String
+  slug              String    @unique
+  logoUrl           String?
+  mensajeBienvenida String?
+  direccion         String?
+  metodosPago       Json?
+  activo            Boolean   @default(true)
+  abierto           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  zonas             Zona[]
+  mesas             Mesa[]
+  categorias        Categoria[]
+  productos         Producto[]
+  pedidos           Pedido[]
+  usuarios          User[]
+  clientes          Cliente[]
+  canciones         Cancion[]
+  facturas          Factura[]
+  promociones       Promocion[]
+  reservas          Reserva[]
+  cajas             Caja[]
+  proveedores       Proveedor[]
+  ordenes           OrdenCompra[]
+  insumos           Insumo[]
+}
+
+model User {
+  id             String             @id @default(cuid())
+  tenantId       String?
+  tenant         Tenant?            @relation(fields: [tenantId], references: [id])
+  nombre         String
+  email          String             @unique
+  telefono       String?
+  passwordHash   String
+  role           Role
+  activo         Boolean            @default(true)
+  enTurno        Boolean            @default(false)
+  ocupado        Boolean            @default(false)
+  tenantActivoId String?
+  base           Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  asignaciones   AsignacionMesero[]
+  pedidos        Pedido[]           @relation("MeseroPedidos")
+  cajas          Caja[]
+}
+
+model Cliente {
+  id           String       @id @default(cuid())
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  nombre       String
+  email        String?
+  telefono     String?
+  passwordHash String?
+  puntos       Int          @default(0)
+  nivel        NivelCliente @default(BRONCE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  pedidos      Pedido[]
+
+  @@unique([tenantId, telefono])
+}
+
+model Zona {
+  id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  nombre      String
+  orden       Int                @default(0)
+  mesas       Mesa[]
+  asignaciones AsignacionMesero[]
+
+  @@unique([tenantId, nombre])
+}
+
+model Mesa {
+  id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  zonaId      String
+  zona        Zona               @relation(fields: [zonaId], references: [id])
+  nombre      String
+  capacidad   Int                @default(4)
+  qrToken     String             @unique
+  estado      EstadoMesa         @default(LIBRE)
+  activo      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  pedidos     Pedido[]
+  asignaciones AsignacionMesero[]
+  canciones   Cancion[]
+  sesion      SesionMesa?
+
+  @@unique([tenantId, nombre])
+}
+
+model Categoria {
+  id        String     @id @default(cuid())
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  nombre    String
+  icono     String?
+  orden     Int        @default(0)
+  activo    Boolean    @default(true)
+  productos Producto[]
+
+  @@unique([tenantId, nombre])
+}
+
+model Producto {
+  id          String                 @id @default(cuid())
+  tenantId    String
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id])
+  categoriaId String
+  categoria   Categoria              @relation(fields: [categoriaId], references: [id])
+  nombre      String
+  descripcion String?
+  precio      Int
+  costo       Int                    @default(0)
+  stock       Int                    @default(0)
+  stockMinimo Int                    @default(0)
+  emoji       String?
+  imagenUrl   String?
+  estacion    String                 @default("BARRA")
+  activo      Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  opciones    ProductoOpcion[]
+  detalles    DetallePedido[]
+  movimientos MovimientoInventario[]
+  ordenItems  OrdenCompraItem[]
+  receta      RecetaInsumo[]
+
+  @@unique([tenantId, nombre])
+}
+
+model ProductoOpcion {
+  id          String   @id @default(cuid())
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id])
+  grupo       String
+  nombre      String
+  precioExtra Int      @default(0)
+}
+
+model Insumo {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre      String
+  categoria   String?
+  cantidad    Float    @default(0)
+  unidad      String   @default("unidad")
+  stockMinimo Float    @default(0)
+  costo       Int      @default(0)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  receta      RecetaInsumo[]
+
+  @@unique([tenantId, nombre])
+}
+
+model RecetaInsumo {
+  id         String   @id @default(cuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  insumoId   String
+  insumo     Insumo   @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  cantidad   Float
+  createdAt  DateTime @default(now())
+
+  @@unique([productoId, insumoId])
+}
+
+model Pedido {
+  id          String          @id @default(cuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  mesaId      String
+  mesa        Mesa            @relation(fields: [mesaId], references: [id])
+  clienteId   String?
+  cliente     Cliente?        @relation(fields: [clienteId], references: [id])
+  meseroId    String?
+  mesero      User?           @relation("MeseroPedidos", fields: [meseroId], references: [id])
+  codigo      String          @unique
+  estado      EstadoPedido    @default(RECIBIDO)
+  modo        ModoEntrega     @default(MESA)
+  subtotal    Int
+  propina     Int             @default(0)
+  total       Int
+  metodoPago  MetodoPago?
+  pin         Int?
+  pagadoEn    DateTime?
+  listoEn     DateTime?
+  entregadoEn DateTime?
+  canceladoEn DateTime?
+  canceladoPor String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  detalles    DetallePedido[]
+  pagos       Pago[]
+  factura     Factura?
+  encuesta    Encuesta?
+  miembroId   String?
+  miembro     MiembroSesion? @relation(fields: [miembroId], references: [id])
+}
+
+model DetallePedido {
+  id             String   @id @default(cuid())
+  pedidoId       String
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id])
+  productoId     String
+  producto       Producto @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  precioUnitario Int
+  notas          String?
+}
+
+model Pago {
+  id         String     @id @default(cuid())
+  tenantId   String
+  pedidoId   String
+  pedido     Pedido     @relation(fields: [pedidoId], references: [id])
+  metodo     MetodoPago
+  monto      Int
+  referencia String?
+  estado     String     @default("aprobado")
+  createdAt  DateTime   @default(now())
+}
+
+model MovimientoInventario {
+  id         String         @id @default(cuid())
+  tenantId   String
+  productoId String
+  producto   Producto       @relation(fields: [productoId], references: [id])
+  tipo       TipoMovimiento
+  cantidad   Int
+  createdAt  DateTime       @default(now())
+}
+
+model Caja {
+  id         String          @id @default(cuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id])
+  userId     String
+  user       User            @relation(fields: [userId], references: [id])
+  apertura   Int
+  cierre     Int?
+  inventarioInicio Json?
+  abiertaEn  DateTime        @default(now())
+  cerradaEn  DateTime?
+  movimientos CajaMovimiento[]
+}
+
+model CajaMovimiento {
+  id        String      @id @default(cuid())
+  cajaId    String
+  caja      Caja        @relation(fields: [cajaId], references: [id])
+  tipo      String
+  monto     Int
+  metodo    MetodoPago?
+  concepto  String?
+  createdAt DateTime    @default(now())
+}
+
+model Cancion {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  mesaId    String?
+  mesa      Mesa?         @relation(fields: [mesaId], references: [id])
+  tema      String
+  origen    String        @default("CLIENTE")
+  estado    EstadoCancion @default(PENDIENTE)
+  votos     Int           @default(0)
+  createdAt DateTime      @default(now())
+}
+
+model CancionPreferida {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  tema      String
+  createdAt DateTime @default(now())
+}
+
+model SesionMesa {
+  id        String           @id @default(cuid())
+  tenantId  String
+  mesaId    String           @unique
+  mesa      Mesa             @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  codigo    String
+  activo    Boolean          @default(true)
+  creadoEn  DateTime         @default(now())
+  miembros  MiembroSesion[]
+}
+
+model MiembroSesion {
+  id        String      @id @default(cuid())
+  sesionId  String
+  sesion    SesionMesa  @relation(fields: [sesionId], references: [id], onDelete: Cascade)
+  alias     String
+  clienteId String?
+  creadoEn  DateTime    @default(now())
+  pedidos   Pedido[]
+}
+
+model Factura {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  pedidoId  String        @unique
+  pedido    Pedido        @relation(fields: [pedidoId], references: [id])
+  numero    String        @unique
+  estado    EstadoFactura @default(EMITIDA)
+  cufe      String?
+  xmlUrl    String?
+  pdfUrl    String?
+  createdAt DateTime      @default(now())
+}
+
+model Promocion {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  nombre      String
+  descripcion String?
+  activa      Boolean   @default(false)
+  horaInicio  DateTime?
+  horaFin     DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Reserva {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  cliente   String
+  fecha     DateTime
+  personas  Int
+  estado    String   @default("pendiente")
+  createdAt DateTime @default(now())
+}
+
+model Proveedor {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id])
+  nombre    String
+  telefono  String?
+  createdAt DateTime       @default(now())
+  ordenes   OrdenCompra[]
+}
+
+model OrdenCompra {
+  id          String            @id @default(cuid())
+  tenantId    String
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  proveedorId String
+  proveedor   Proveedor         @relation(fields: [proveedorId], references: [id])
+  estado      String            @default("pendiente")
+  createdAt   DateTime          @default(now())
+  items       OrdenCompraItem[]
+}
+
+model OrdenCompraItem {
+  id         String    @id @default(cuid())
+  ordenId    String
+  orden      OrdenCompra @relation(fields: [ordenId], references: [id])
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+  cantidad   Int
+}
+
+model AsignacionMesero {
+  id       String  @id @default(cuid())
+  tenantId String
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+  zonaId   String?
+  zona     Zona?   @relation(fields: [zonaId], references: [id])
+  mesaId   String?
+  mesa     Mesa?   @relation(fields: [mesaId], references: [id])
+}
+
+model Encuesta {
+  id        String   @id @default(cuid())
+  tenantId  String
+  pedidoId  String   @unique
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id])
+  estrellas Int
+  comentario String?
+  createdAt DateTime @default(now())
+}

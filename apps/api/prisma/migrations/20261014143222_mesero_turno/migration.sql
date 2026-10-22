@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "enTurno" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "ocupado" BOOLEAN NOT NULL DEFAULT false;

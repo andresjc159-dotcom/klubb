@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KLUBB — Prototipo completo</title>
+<style>
+  :root{
+    --bg:#0d0f12; --panel:#16191f; --panel2:#1d222b; --line:#2a2f3a;
+    --text:#e7e9ee; --muted:#8b93a3; --accent:#f5b301; --accent2:#e09a00;
+    --ok:#2ecc71; --warn:#e67e22; --bad:#e74c3c; --info:#3498db; --purple:#9b59b6;
+    --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden}
+  button{font-family:inherit; cursor:pointer; border:none; border-radius:9px}
+  input,select,textarea{font-family:inherit; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px; width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent)}
+  label{font-size:12px; color:var(--muted); display:block; margin:10px 0 4px}
+
+  .app{display:grid; grid-template-rows:56px 1fr; height:100vh}
+  header{display:flex; align-items:center; gap:16px; padding:0 18px; background:var(--panel); border-bottom:1px solid var(--line)}
+  .logo{font-weight:800; letter-spacing:.5px; font-size:18px}
+  .logo span{color:var(--accent)}
+  .role-switch{margin-left:auto; display:flex; align-items:center; gap:8px}
+  .role-switch select{min-width:210px; width:auto}
+
+  .layout{display:grid; grid-template-columns:230px 1fr; overflow:hidden}
+  nav{background:var(--panel); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:4px; overflow-y:auto}
+  nav button{text-align:left; background:transparent; color:var(--muted); padding:10px 12px; font-size:14px; display:flex; gap:10px; align-items:center; border-radius:9px; transition:.15s; width:100%}
+  nav button:hover{color:var(--text); background:var(--panel2)}
+  nav button.active{color:var(--accent); background:var(--panel2)}
+
+  main{padding:22px; overflow-y:auto; position:relative}
+  .screen{display:none}
+  .screen.on{display:block; animation:fade .25s}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+  h1{font-size:20px; margin-bottom:4px}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:18px}
+  .grid{display:grid; gap:14px}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .cols-4{grid-template-columns:repeat(4,1fr)}
+  .cols-2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
+  .card h3{font-size:14px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between}
+  .stat{font-size:26px; font-weight:700}
+  .stat small{font-size:12px; color:var(--muted); font-weight:400; display:block; margin-top:4px}
+
+  .pill{display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap}
+  .pill.ok{background:rgba(46,204,113,.15); color:var(--ok)}
+  .pill.warn{background:rgba(230,126,34,.15); color:var(--warn)}
+  .pill.bad{background:rgba(231,76,60,.15); color:var(--bad)}
+  .pill.info{background:rgba(52,152,219,.15); color:var(--info)}
+  .pill.mute{background:var(--panel2); color:var(--muted)}
+  .pill.purple{background:rgba(155,89,182,.15); color:var(--purple)}
+
+  .btn{background:var(--panel2); color:var(--text); padding:9px 14px; font-weight:600; border:1px solid var(--line)}
+  .btn.primary{background:var(--accent); color:#15120a; border-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent2)}
+  .btn.danger{background:var(--bad); color:#fff}
+  .btn.sm{padding:6px 10px; font-size:12px}
+  .btn.block{width:100%}
+  .btn.ghost{background:transparent}
+
+  .table-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px}
+  .mesa{border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center; cursor:pointer; background:var(--panel); transition:.15s}
+  .mesa:hover{border-color:var(--accent)}
+  .mesa .num{font-size:20px; font-weight:800}
+  .mesa .zona{font-size:10px; color:var(--muted); margin-top:2px}
+  .mesa .estado{margin-top:6px}
+  .mesa.libre{border-top:3px solid var(--ok)}
+  .mesa.ocupada{border-top:3px solid var(--warn)}
+  .mesa.pidiendo{border-top:3px solid var(--info)}
+
+  .list-item{display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--panel); margin-bottom:10px}
+  .list-item .body{flex:1; min-width:0}
+  .list-item .title{font-weight:600}
+  .list-item .meta{font-size:12px; color:var(--muted); margin-top:3px}
+
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .spread{justify-content:space-between}
+  .qty{display:flex; align-items:center; gap:8px}
+  .qty button{width:26px; height:26px; background:var(--panel2); color:var(--text); font-weight:700; border:1px solid var(--line)}
+  .bar{height:6px; border-radius:99px; background:var(--panel2); overflow:hidden}
+  .bar > div{height:100%; background:var(--accent)}
+  .bar.green > div{background:var(--ok)}
+  .bar.purple > div{background:var(--purple)}
+
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:50}
+  .modal-bg.on{display:flex}
+  .modal{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; width:440px; max-width:92vw; max-height:90vh; overflow-y:auto}
+  .modal h2{font-size:17px; margin-bottom:14px}
+  .qr{background:#fff; padding:14px; border-radius:12px; text-align:center; width:180px; margin:12px auto}
+  .qr .mock{font-family:monospace; font-size:11px; color:#111; line-height:1.15; word-break:break-all}
+  .qr .url{font-size:10px; color:#555; margin-top:6px}
+
+  .toast-wrap{position:fixed; bottom:18px; right:18px; display:flex; flex-direction:column; gap:10px; z-index:100}
+  .toast{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); padding:12px 16px; border-radius:10px; box-shadow:var(--shadow); font-size:13px; animation:slide .25s; max-width:320px}
+  .toast.ok{border-left-color:var(--ok)} .toast.bad{border-left-color:var(--bad)} .toast.info{border-left-color:var(--info)}
+  @keyframes slide{from{opacity:0; transform:translateX(20px)}to{opacity:1; transform:none}}
+
+  /* Login */
+  .login-wrap{max-width:400px; margin:40px auto; text-align:center}
+  .login-brand{font-size:40px; font-weight:800; letter-spacing:1px}
+  .login-brand span{color:var(--accent)}
+  .login-card{text-align:left; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; margin-top:18px}
+
+  /* Cliente (PWA) */
+  .phone{max-width:410px; margin:0 auto; background:#0a0c10; border:1px solid var(--line); border-radius:26px; overflow:hidden; min-height:640px; display:flex; flex-direction:column; box-shadow:0 24px 70px rgba(0,0,0,.6)}
+  .c-hero{position:relative; padding:18px 16px 14px; background:radial-gradient(130% 120% at 20% -10%, #3a2a06 0%, #141821 55%, #0d0f12 100%); border-bottom:1px solid var(--line); overflow:hidden}
+  .c-hero::before{content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(245,179,1,.16), transparent 62%); pointer-events:none}
+  .c-top{display:flex; align-items:center; gap:11px; position:relative; z-index:1}
+  .c-avatar{width:42px; height:42px; border-radius:13px; background:linear-gradient(135deg,var(--accent),#7a5b00); display:flex; align-items:center; justify-content:center; font-weight:800; color:#15120a; flex-shrink:0; font-size:15px}
+  .c-title{font-weight:800; font-size:16px}
+  .c-subtitle{font-size:11px; color:var(--muted)}
+  .c-pts{font-size:11px; color:var(--accent); font-weight:700}
+  .c-search{position:relative; z-index:1; margin-top:12px}
+  .c-search input{background:rgba(255,255,255,.07); border:1px solid var(--line); border-radius:12px; padding:10px 12px 10px 34px}
+  .c-search span{position:absolute; left:11px; top:9px; opacity:.55}
+
+  .c-body{flex:1; overflow-y:auto; padding:14px 14px 4px}
+  .c-chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; scrollbar-width:none}
+  .c-chips::-webkit-scrollbar{display:none}
+  .c-chip{display:flex; flex-direction:column; align-items:center; gap:4px; background:transparent; color:var(--muted); padding:8px 12px; font-size:11px; border-radius:13px; min-width:66px; flex-shrink:0}
+  .c-chip .ico{font-size:21px}
+  .c-chip.on{background:rgba(245,179,1,.13); color:var(--accent)}
+
+  .c-card{display:flex; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:10px; margin-bottom:10px; align-items:center; cursor:pointer}
+  .c-card:hover{border-color:var(--accent)}
+  .c-img{width:58px; height:58px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:27px; flex-shrink:0; background:linear-gradient(135deg,#262c37,#16191f)}
+  .c-info{flex:1; min-width:0}
+  .c-name{font-weight:700; font-size:14px}
+  .c-desc{font-size:11px; color:var(--muted); margin:2px 0}
+  .c-price{font-weight:700; color:var(--accent); font-size:14px}
+  .add-btn{width:32px; height:32px; border-radius:50%; background:var(--accent); color:#15120a; font-weight:800; font-size:19px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:.12s}
+  .add-btn:active{transform:scale(.85)}
+
+  .c-section{font-weight:700; font-size:13px; margin:16px 0 10px; display:flex; align-items:center; gap:6px}
+  .hscroll{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none}
+  .hscroll::-webkit-scrollbar{display:none}
+  .mini{min-width:150px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px; flex-shrink:0}
+  .mini .c-img{width:44px;height:44px;font-size:20px}
+
+  .c-tabbar{display:flex; border-top:1px solid var(--line); background:var(--panel); flex-shrink:0}
+  .c-tab{flex:1; text-align:center; padding:9px 4px 11px; background:transparent; color:var(--muted); font-size:10px; border-radius:0; position:relative}
+  .c-tab .ico{font-size:19px; display:block; margin-bottom:2px}
+  .c-tab.on{color:var(--accent)}
+  .c-tab .dot{position:absolute; top:8px; right:calc(50% - 16px); width:8px; height:8px; border-radius:50%; background:var(--accent)}
+
+  .banner{margin-bottom:12px; border-radius:16px; padding:16px; background:linear-gradient(120deg, rgba(245,179,1,.18), rgba(155,89,182,.12)); border:1px solid var(--line)}
+  .banner b{color:var(--accent)}
+  .banner.flash{border-color:var(--accent); animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,179,1,.4)}50%{box-shadow:0 0 0 8px rgba(245,179,1,0)}}
+  .float-account{margin:0 -14px -4px; padding:10px 14px; background:linear-gradient(180deg, transparent, #0a0c10 30%)}
+  .float-account .inner{background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:12px; justify-content:space-between}
+  .order-tag{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); padding:6px 0}
+
+  /* KDS */
+  .kds-bar{display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 16px; margin-bottom:14px}
+  .kds-cols{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; align-items:start}
+  .kds-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; min-height:220px}
+  .kds-col h3{font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:12px}
+  .kds-col .dotc{width:10px;height:10px;border-radius:50%}
+  .kds-card{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--panel2)}
+  .kds-card.r{border-left:4px solid var(--bad)}
+  .kds-card.p{border-left:4px solid var(--warn)}
+  .kds-card.l{border-left:4px solid var(--ok)}
+  .kds-code{font-weight:800; color:var(--accent); font-size:14px}
+  .kds-meta{font-size:11px; color:var(--muted); margin:2px 0}
+  .kds-items{font-size:13px; margin:6px 0}
+  .pin{font-family:monospace; letter-spacing:6px; font-size:20px; font-weight:700; text-align:center; padding:8px; background:var(--panel2); border-radius:8px; margin:8px 0}
+
+  /* Paginación */
+  .pager{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-top:12px}
+  .pager button{background:var(--panel2); border:1px solid var(--line); color:var(--muted); padding:6px 10px; font-size:12px}
+  .pager button.on{background:var(--accent); color:#15120a; border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header id="topbar">
+    <div class="logo" id="headerLogo">KLUB<span>B</span></div>
+    <div class="role-switch">
+      <span style="font-size:12px;color:var(--muted)">Vista:</span>
+      <select id="roleSel"></select>
+      <button class="btn sm" id="logoutBtn" onclick="logout()">Salir</button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav id="nav"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBody"></div></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+const ROLES = {
+  master:   { label:"Master (dueño multi-local)", short:"Master", screens:["dashboard","locales","reportes","facturacion"] },
+  admin:    { label:"Administrador", short:"Administrador", screens:["dashboard","mesas","asignacion","inventario","reportes","facturacion","caja","compras","lealtad","promos","reservas","espera","usuarios","config"] },
+  mesero:   { label:"Mesero", short:"Mesero", screens:["mesero","pagos","caja"] },
+  barra:    { label:"Barra", short:"Barra", screens:["barra"] },
+  barman:   { label:"Barman", short:"Barman", screens:["barra"] },
+  dj:       { label:"DJ", short:"DJ", screens:["dj"] },
+  cajero:   { label:"Cajero", short:"Cajero", screens:["caja","pagos","reportes"] },
+  cliente:  { label:"Cliente (QR / PWA)", short:"Cliente", screens:["cliente"] }
+};
+
+const NAV_LABEL = {
+  dashboard:"Inicio", locales:"Locales", mesas:"Mesas", inventario:"Inventario",
+  reportes:"Reportes", mesero:"Mis mesas", pagos:"Pagos", barra:"Pedidos (KDS)",
+  dj:"Canciones", cliente:"Pedir en la mesa", facturacion:"Facturación",
+  caja:"Caja / Turnos", compras:"Compras", lealtad:"Lealtad VIP",
+  promos:"Promos", reservas:"Reservas", espera:"Lista de espera",
+  usuarios:"Usuarios", config:"Configuración", asignacion:"Asignar meseros"
+};
+
+let loggedIn = false;
+let role = "cliente";
+let screen = "cliente";
+
+const state = {
+  config: {barName:"La Noche Bar", bienvenida:"¡Bienvenido!", logo:"KL"},
+  locales: ["Bar La Noche — Medellín", "Bar El Puerto — Cartagena"],
+  zonas: ["Barra Principal","VIP","Terraza","Pista","Palcos"],
+  mesas: [
+    {id:1, zona:"Barra Principal", estado:"libre", mesero:"", qr:"KLB-m1"},
+    {id:2, zona:"VIP", estado:"ocupada", mesero:"Laura", qr:"KLB-m2"},
+    {id:3, zona:"Pista", estado:"pidiendo", mesero:"Laura", qr:"KLB-m3"},
+    {id:4, zona:"Terraza", estado:"libre", mesero:"", qr:"KLB-m4"},
+    {id:5, zona:"VIP", estado:"libre", mesero:"", qr:"KLB-m5"},
+    {id:6, zona:"Palcos", estado:"ocupada", mesero:"Carlos", qr:"KLB-m6"}
+  ],
+  asignaciones: {Laura:["VIP","Pista"], Carlos:["Palcos","Terraza"]},
+  solicitudes: [
+    {id:1, mesa:2, tipo:"Llamar mesero", tiempo:"hace 1 min"},
+    {id:2, mesa:6, tipo:"Pedir hielo extra", tiempo:"hace 3 min"}
+  ],
+  categorias:["Cocteles","Cervezas","Licores","Comidas","Sin alcohol"],
+  productos:[
+    {id:1, cat:"Cocteles", nombre:"Mojito", precio:22000, costo:6000, stock:12, min:5, emoji:"🍹"},
+    {id:2, cat:"Cocteles", nombre:"Piña Colada", precio:24000, costo:7000, stock:3, min:4, emoji:"🍍"},
+    {id:3, cat:"Cervezas", nombre:"Corona", precio:9000, costo:4000, stock:0, min:12, emoji:"🍺"},
+    {id:4, cat:"Cervezas", nombre:"Club Colombia", precio:8000, costo:3500, stock:48, min:12, emoji:"🍺"},
+    {id:5, cat:"Licores", nombre:"Ron Medellín x copa", precio:12000, costo:4000, stock:20, min:4, emoji:"🥃"},
+    {id:8, cat:"Licores", nombre:"Botella Ron Viejo 750ml", precio:180000, costo:90000, stock:8, min:2, emoji:"🍾"},
+    {id:6, cat:"Comidas", nombre:"Nachos", precio:18000, costo:6000, stock:15, min:5, emoji:"🧀"},
+    {id:7, cat:"Sin alcohol", nombre:"Soda", precio:5000, costo:1500, stock:30, min:8, emoji:"🥤"}
+  ],
+  pedidos: [
+    {id:101, codigo:"#B-042", mesa:3, zona:"VIP", items:[{p:"Mojito",q:2},{p:"Nachos",q:1}], estado:"recibido", mesero:"Laura", total:62000, modo:"mesa", min:1, pin:8421},
+    {id:102, codigo:"#B-041", mesa:2, zona:"Pista", items:[{p:"Club Colombia",q:4}], estado:"en_preparacion", mesero:"Laura", total:32000, modo:"mesa", min:4, pin:3012},
+    {id:103, codigo:"#B-040", mesa:8, zona:"Terraza", items:[{p:"Botella Ron Viejo 750ml",q:1},{p:"Coca-Cola 1.5L",q:1}], estado:"listo", mesero:"Carlos", total:180000, modo:"pickup", min:6, pin:1155}
+  ],
+  canciones: [
+    {id:1, tema:"Feid — Luna", mesa:3, estado:"pendiente", votos:14},
+    {id:2, tema:"Bad Bunny — Monaco", mesa:2, estado:"sonando", votos:9},
+    {id:3, tema:"Karol G — Provenza", mesa:6, estado:"pendiente", votos:7}
+  ],
+  pagos: [
+    {id:501, mesero:"Laura", mesa:2, metodo:"Efectivo", total:32000, productos:"4x Club Colombia", hora:"21:40"},
+    {id:502, mesero:"Carlos", mesa:6, metodo:"Tarjeta", total:48000, productos:"2x Ron, 1x Nachos", hora:"22:10"},
+    {id:503, mesero:"Laura", mesa:3, metodo:"Nequi", total:62000, productos:"2x Mojito, 1x Nachos", hora:"22:30"}
+  ],
+  cierreZ: [
+    {metodo:"Nequi", total:62000, trx:3},
+    {metodo:"Tarjeta", total:48000, trx:2},
+    {metodo:"PSE", total:315000, trx:9},
+    {metodo:"Efectivo", total:855000, trx:114}
+  ],
+  facturas: [
+    {id:"FE-1001", mesa:2, total:32000, estado:"emitida", fecha:"22:15", cliente:"Consumidor final"},
+    {id:"FE-1002", mesa:6, total:48000, estado:"emitida", fecha:"22:10", cliente:"Andrés Gómez"}
+  ],
+  caja: {turno:"abierto", apertura:300000, ingresos:1280000, egresos:45000, mesero:"Laura"},
+  proveedores:["Distribuidora Licores S.A.","Cervecería Unión","Alimentos del Valle"],
+  compras: [
+    {id:1, proveedor:"Cervecería Unión", producto:"Club Colombia x24", cant:24, estado:"pendiente", auto:true},
+    {id:2, proveedor:"Distribuidora Licores S.A.", producto:"Ron Medellín x12", cant:12, estado:"recibida"}
+  ],
+  encuestas: [
+    {mesa:2, estrellas:5, comentario:"Excelente servicio, la música muy buena"},
+    {mesa:6, estrellas:4, comentario:"Todo bien, demoraron un poco en la cuenta"}
+  ],
+  reservas: [
+    {id:1, cliente:"Andrés Gómez", fecha:"Vie 22:00", personas:4, estado:"confirmada"},
+    {id:2, cliente:"María Pérez", fecha:"Sáb 21:30", personas:8, estado:"confirmada"}
+  ],
+  espera: [
+    {grupo:"Grupo de 3", personas:3, tiempo:12},
+    {grupo:"Pareja", personas:2, tiempo:7}
+  ],
+  promos: [
+    {nombre:"Happy Hour", desc:"2x1 en cocteles · Lunes a Jueves 6pm–8pm", activa:true},
+    {nombre:"Noche de Ron", desc:"20% en rones · Viernes", activa:true}
+  ],
+  promosRelampago: [],
+  nivelesVIP:["Bronce","Plata","Oro","Black"],
+  usuarios: [
+    {id:1, nombre:"Andrés (Dueño)", rol:"master", email:"dueno@bar.com", estado:"Activo"},
+    {id:2, nombre:"Laura", rol:"mesero", email:"laura@bar.com", estado:"Activo"},
+    {id:3, nombre:"Carlos", rol:"mesero", email:"carlos@bar.com", estado:"Activo"},
+    {id:4, nombre:"Juan", rol:"barman", email:"juan@bar.com", estado:"Activo"},
+    {id:5, nombre:"DJ Pipe", rol:"dj", email:"dj@bar.com", estado:"Activo"},
+    {id:6, nombre:"Sofía (Cajera)", rol:"cajero", email:"sofia@bar.com", estado:"Inactivo"}
+  ],
+  misPuntos: 720, miNivel: "Plata",
+  miCuenta: [
+    {p:"Mojito", q:2, precio:22000, estado:"servido"},
+    {p:"Club Colombia", q:4, precio:8000, estado:"en_preparacion"}
+  ],
+  registrado: false,
+  usuario: {nombre:"", puntos:720, nivel:"Plata"},
+  carrito: [],
+  miMesa: 3,
+  votados: [],
+  clientTab: "menu",
+  catActual: "Cocteles",
+  modoEntrega: "mesa",
+  propina: 10,
+  nextCodigo: 43
+};
+
+const currency = n => "$" + n.toLocaleString("es-CO");
+const margin = p => Math.round((p.precio - p.costo) / p.precio * 100);
+
+function toast(msg, type){
+  const w = document.getElementById("toasts");
+  const t = document.createElement("div");
+  t.className = "toast " + (type||"");
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+function openModal(html){
+  document.getElementById("modalBody").innerHTML = html;
+  document.getElementById("modalBg").classList.add("on");
+}
+function closeModal(){
+  document.getElementById("modalBg").classList.remove("on");
+  document.getElementById("modalBody").innerHTML = "";
+}
+document.getElementById("modalBg").addEventListener("click", e=>{ if(e.target.id==="modalBg") closeModal(); });
+
+function renderNav(){
+  const nav = document.getElementById("nav");
+  nav.innerHTML = ROLES[role].screens.map(s =>
+    `<button data-s="${s}" class="${s===screen?'active':''}">${NAV_LABEL[s]}</button>`
+  ).join("");
+  nav.querySelectorAll("button").forEach(b=> b.onclick=()=>{ screen=b.dataset.s; render(); });
+}
+
+function renderRoleSel(){
+  const sel = document.getElementById("roleSel");
+  sel.innerHTML = Object.entries(ROLES).map(([k,v])=>`<option value="${k}">${v.short}</option>`).join("");
+  sel.value = role;
+  sel.onchange = ()=>{ role = sel.value; screen = ROLES[role].screens[0]; render(); };
+}
+
+function render(){
+  if(!loggedIn){
+    document.getElementById("roleSel").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "none";
+    document.getElementById("nav").innerHTML = "";
+    document.getElementById("main").innerHTML = loginScreen();
+    document.getElementById("headerLogo").innerHTML = state.config.logo + `<span>B</span>`;
+    return;
+  }
+  document.getElementById("roleSel").style.display = "";
+  document.getElementById("logoutBtn").style.display = "";
+  document.getElementById("headerLogo").innerHTML = state.config.logo + `<span>B</span>`;
+  renderNav(); renderRoleSel();
+  const main = document.getElementById("main");
+  const f = SCREENS[screen];
+  main.innerHTML = f ? f() : "<h1>Sin contenido</h1>";
+}
+
+function loginScreen(){
+  return `<div class="login-wrap">
+    <div class="login-brand">${state.config.logo}<span>B</span></div>
+    <div class="sub" style="text-align:center">${state.config.barName} · Panel de gestión</div>
+    <div class="login-card">
+      <label>Usuario / Correo</label><input placeholder="admin@bar.com" />
+      <label>Contraseña</label><input type="password" placeholder="••••••" />
+      <br><button class="btn primary block" onclick="doLoginAs('admin')">Iniciar sesión</button>
+    </div>
+    <div class="sub" style="text-align:center; margin:18px 0 8px">Acceso rápido por rol (demo)</div>
+    <div class="grid cols-2">
+      ${Object.entries(ROLES).map(([k,v])=>`<button class="btn" onclick="doLoginAs('${k}')">${v.short}</button>`).join("")}
+    </div>
+    <div class="sub" style="text-align:center; margin-top:16px; font-size:11px">JWT · sesión persistente · cierre por inactividad (RNF-03)</div>
+  </div>`;
+}
+function doLoginAs(r){ loggedIn=true; role=r; screen=ROLES[r].screens[0]; render(); toast("Sesión iniciada como "+ROLES[r].short+" ✓","ok"); }
+function logout(){ loggedIn=false; render(); toast("Sesión cerrada"); }
+
+/* ===== SCREENS ===== */
+const SCREENS = {
+  dashboard(){
+    return `<h1>Panel general</h1><div class="sub">${state.locales[0]} — Turno noche</div>
+    <div class="grid cols-4">
+      <div class="card"><div class="stat">$1.280.000<small>Ventas de hoy</small></div></div>
+      <div class="card"><div class="stat">128<small>Pedidos</small></div></div>
+      <div class="card"><div class="stat">4.6 ★<small>Satisfacción</small></div></div>
+      <div class="card"><div class="stat">3<small>Agotados</small></div></div>
+    </div>
+    <br>
+    <div class="grid cols-2">
+      <div class="card"><h3>Ventas por mesero</h3>
+        ${state.pagos.map(p=>`<div class="list-item"><div class="body"><div class="title">${p.mesero}</div><div class="meta">${p.productos}</div></div><div class="stat" style="font-size:18px">${currency(p.total)}</div></div>`).join("")}
+      </div>
+      <div class="card"><h3>Alertas en tiempo real</h3>
+        <div class="list-item"><div class="body"><div class="title">Stock bajo: Piña Colada</div><div class="meta">Quedan 3 · mínimo 4</div></div><span class="pill warn">Bajo</span></div>
+        <div class="list-item"><div class="body"><div class="title">Corona agotado</div><div class="meta">Oculto a clientes</div></div><span class="pill bad">Agotado</span></div>
+        <div class="list-item"><div class="body"><div class="title">Orden de compra generada</div><div class="meta">Club Colombia x24</div></div><span class="pill info">Auto</span></div>
+      </div>
+    </div>`;
+  },
+
+  locales(){
+    return `<h1>Locales</h1><div class="sub">Gestionas ${state.locales.length} bares (rol master)</div>
+    <div class="grid cols-3">
+      ${state.locales.map(l=>`<div class="card"><h3>${l}</h3><div class="pill ok">Activo</div><br><br>
+        <div class="meta" style="font-size:12px;color:var(--muted)">Ventas hoy: $2.4M · Mesas: 24</div><br>
+        <button class="btn sm" onclick="toast('Abriendo local…')">Entrar</button></div>`).join("")}
+      <div class="card" style="border-style:dashed; display:flex; align-items:center; justify-content:center; min-height:140px"><button class="btn primary" onclick="toast('Crear local (flujo)')">+ Nuevo local</button></div>
+    </div>`;
+  },
+
+  mesas(){
+    const byZona = z => state.mesas.filter(m=>m.zona===z);
+    return `<div class="row spread"><div><h1>Mesas y Zonas</h1><div class="sub">${state.zonas.length} zonas · ${state.mesas.length} mesas en ${state.locales[0]}</div></div>
+      <div class="row"><button class="btn" onclick="crearZona()">+ Zona</button><button class="btn primary" onclick="crearMesa()">+ Crear mesa</button></div></div>
+    <div class="grid">
+      ${state.zonas.map(z=>`<div class="card"><h3>📍 ${z} <span class="pill mute">${byZona(z).length}</span></h3>
+        <div class="table-grid" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">
+          ${byZona(z).map(m=>`<div class="mesa ${m.estado}" onclick="verMesa(${m.id})">
+            <div class="num">M${m.id}</div>
+            <div class="estado"><span class="pill ${m.estado==='libre'?'ok':m.estado==='ocupada'?'warn':'info'}">${m.estado}</span></div>
+            <div style="margin-top:5px;font-size:10px;color:var(--muted)">${m.mesero||"s/mesero"}</div>
+          </div>`).join("")}
+          ${byZona(z).length===0?'<div class="meta" style="color:var(--muted)">Sin mesas</div>':''}
+        </div>
+      </div>`).join("")}
+    </div>
+    <br><button class="btn primary" onclick="toast('Descargando ZIP con QRs listos para imprimir 📥')">📥 Descargar ZIP de QRs (SVG/PNG)</button>`;
+  },
+
+  asignacion(){
+    return `<h1>Asignación de meseros</h1><div class="sub">Matriz mesero → zonas/mesas · las alertas llegan solo al asignado (RF-A22–A24)</div>
+    <div class="grid cols-2">
+      <div class="card"><h3>Meseros del turno</h3>
+        ${Object.keys(state.asignaciones).map(ms=>`<div class="list-item"><div class="body"><div class="title">${ms}</div><div class="meta">Zonas: ${state.asignaciones[ms].join(", ")}</div></div><button class="btn sm" onclick="toast('Reasignando ${ms}…')">Reasignar</button></div>`).join("")}
+      </div>
+      <div class="card"><h3>Rutero de notificaciones</h3>
+        <div class="meta" style="margin-bottom:10px">Cuando una orden esté "Lista en barra", la alerta llega únicamente al mesero de esa zona.</div>
+        <div class="list-item"><div class="body"><div class="title">Pedido #B-040 · Mesa 8 (Terraza)</div><div class="meta">Estado: Listo → notificar a Carlos 🔔</div></div><span class="pill ok">Carlos</span></div>
+        <div class="list-item"><div class="body"><div class="title">Pedido #B-041 · Mesa 2 (Pista)</div><div class="meta">En preparación → notificará a Laura</div></div><span class="pill info">Laura</span></div>
+      </div>
+    </div>`;
+  },
+
+  inventario(){
+    return `<div class="row spread"><div><h1>Inventario</h1><div class="sub">${state.productos.length} productos · ${state.categorias.length} categorías</div></div>
+      <button class="btn primary" onclick="crearProducto()">+ Producto</button></div>
+    <div class="grid">
+      ${state.categorias.map(c=>{
+        const ps = state.productos.filter(p=>p.cat===c);
+        return `<div class="card"><h3>${c} <span class="pill mute">${ps.length}</span></h3>
+          ${ps.map(p=>{
+            const pct = Math.min(100, Math.round(p.stock/(p.stock+p.min)*100));
+            const pill = p.stock===0?"bad":p.stock<=p.min?"warn":"ok";
+            return `<div class="list-item" style="padding:9px">
+              <div class="photo" style="height:40px;width:40px;font-size:16px;background:var(--panel2);border-radius:10px;display:flex;align-items:center;justify-content:center">${p.emoji}</div>
+              <div class="body"><div class="title">${p.nombre}</div>
+                <div class="meta">Stock ${p.stock} · ${currency(p.precio)} · <b style="color:var(--ok)">margen ${margin(p)}%</b></div>
+                <div class="bar" style="margin-top:6px"><div style="width:${pct}%"></div></div>
+              </div>
+              <span class="pill ${pill}">${p.stock===0?'Agotado':p.stock<=p.min?'Bajo':'OK'}</span>
+              <button class="btn sm ${p.stock===0?'':'danger'}" onclick="pausarStock(${p.id})">${p.stock===0?'Activar':'Pausar'}</button>
+            </div>`;
+          }).join("")}
+        </div>`;
+      }).join("")}
+    </div>`;
+  },
+
+  reportes(){
+    const historial = Array.from({length:9},(_,i)=>({n:i+1, cod:"#B-0"+(40-i), mesa:(i%6)+1, total:30000+ i*7000, hora:"22:0"+(i%9)}));
+    return `<h1>Reportes</h1><div class="sub">Ventas, desempeño y margen</div>
+    <div class="grid cols-3">
+      ${state.pagos.map(p=>`<div class="card"><h3>${p.mesero}</h3>
+        <div class="stat">${currency(p.total)}<small>${p.hora}</small></div>
+        <div class="meta" style="color:var(--muted); font-size:12px; margin-top:6px">${p.productos}</div>
+        <br><span class="pill ${p.metodo==='Efectivo'?'ok':p.metodo==='Nequi'?'purple':'info'}">${p.metodo}</span>
+      </div>`).join("")}
+    </div>
+    <br>
+    <div class="grid cols-2">
+      <div class="card"><h3>Top productos por margen</h3>
+        ${[...state.productos].sort((a,b)=>margin(b)-margin(a)).slice(0,4).map(p=>`<div class="list-item"><div class="body"><div class="title">${p.nombre}</div><div class="bar green" style="margin-top:6px"><div style="width:${margin(p)}%"></div></div></div><span class="pill ok">${margin(p)}%</span></div>`).join("")}
+      </div>
+      <div class="card"><h3>Ingresos por zona (hoy)</h3>
+        ${["VIP","Pista","Terraza","Palcos"].map(z=>`<div class="list-item"><div class="body"><div class="title">${z}</div><div class="bar" style="margin-top:6px"><div style="width:${[80,65,50,35][state.zonas.indexOf(z)]||40}%"></div></div></div><span class="meta">${currency([420000,340000,260000,180000][state.zonas.indexOf(z)]||0)}</span></div>`).join("")}
+      </div>
+    </div>
+    <br><div class="card"><h3>Historial de pedidos</h3>
+      ${historial.map(h=>`<div class="list-item"><div class="body"><div class="title">${h.cod} · Mesa ${h.mesa}</div><div class="meta">${h.hora} · ${currency(h.total)}</div></div><span class="pill ok">Completado</span></div>`).join("")}
+      <div class="pager">
+        <span class="meta" style="font-size:12px">Registros por página:</span>
+        <select style="width:70px"><option>15</option><option>30</option><option>50</option></select>
+        <button>‹</button><button class="on">1</button><button>2</button><button>3</button><button>›</button>
+      </div>
+    </div>`;
+  },
+
+  mesero(){
+    const mias = state.mesas.filter(m=>m.mesero==="Laura");
+    const pendientes = state.pedidos.filter(p=>p.estado==="listo" && p.modo==="mesa");
+    return `<h1>Panel del mesero</h1><div class="sub">Sesión: Laura · ${mias.length} mesas asignadas (VIP, Pista)</div>
+
+    <div class="grid cols-2">
+      <div class="card"><h3>🔔 Alertas de entrega <span class="pill bad">${pendientes.length}</span></h3>
+        ${pendientes.length? pendientes.map(p=>`<div class="list-item" style="border-left:3px solid var(--ok)"><div class="body"><div class="title">${p.codigo} — Mesa ${p.mesa} (${p.zona})</div><div class="meta">${p.items.map(i=>i.q+"x "+i.p).join(", ")} · lista en barra</div></div><button class="btn primary sm" onclick="confirmarEntrega(${p.id})">📦 Entregar</button></div>`).join("") : `<div class="meta" style="color:var(--muted)">No hay entregas pendientes.</div>`}
+      </div>
+
+      <div class="card"><h3>📣 Asistencia directa <span class="pill warn">${state.solicitudes.length}</span></h3>
+        ${state.solicitudes.length? state.solicitudes.map(s=>`<div class="list-item"><div class="body"><div class="title">${s.tipo}</div><div class="meta">Mesa ${s.mesa} · ${s.tiempo}</div></div><button class="btn sm" onclick="atenderSolicitud(${s.id})">Atendido ✓</button></div>`).join("") : `<div class="meta" style="color:var(--muted)">Sin solicitudes de clientes.</div>`}
+        <div class="meta" style="margin-top:8px">Recibe aquí "Llamar mesero", "Pedir hielo" o "Pedir vasos" de los clientes.</div>
+      </div>
+    </div>
+
+    <br><h1>Mis mesas</h1><div class="sub">Toca una mesa para ver su cuenta y registrar pagos</div>
+    <div class="table-grid">
+      ${mias.map(m=>`<div class="mesa ${m.estado}"><div class="num">M${m.id}</div><div class="zona">${m.zona}</div><div class="estado"><span class="pill ${m.estado==='libre'?'ok':'warn'}">${m.estado}</span></div></div>`).join("")}
+    </div>
+
+    <br><div class="grid cols-2">
+      <div class="card"><h3>Mi propina (hoy)</h3><div class="stat">$86.400<small>10% de $864.000 en ventas</small></div></div>
+      <div class="card"><h3>Confirmación de entrega</h3><div class="meta">Verifica con el PIN o escaneando el QR de la comanda para asegurar que el trago llega a la mesa correcta (RF-09).</div></div>
+    </div>`;
+  },
+
+  barra(){
+    const cols = [
+      {k:"recibido", label:"Recibidos", color:"var(--bad)"},
+      {k:"en_preparacion", label:"En preparación", color:"var(--warn)"},
+      {k:"listo", label:"Listos para entrega", color:"var(--ok)"}
+    ];
+    const kdsCard = p => `
+      <div class="kds-card ${p.estado==='recibido'?'r':p.estado==='en_preparacion'?'p':'l'}">
+        <div class="spread"><span class="kds-code">${p.codigo}</span><span class="pill ${p.estado==='recibido'?'bad':'warn'}">${p.min} min</span></div>
+        <div class="kds-meta">Mesa ${p.mesa} · ${p.zona} · ${p.modo==='mesa'?'🍽️ Servicio a mesa':'🏃 Express Pick-up'}</div>
+        <div class="kds-items">${p.items.map(i=>`• ${i.q}x ${i.p}`).join("<br>")}</div>
+        ${p.modo==='mesa'?`<div class="kds-meta">Llevado por: ${p.mesero}</div>`:''}
+        ${p.estado==='recibido'
+          ? `<button class="btn primary block" style="margin-top:8px" onclick="preparar(${p.id})">⚙️ ATENDER (Empieza)</button>`
+          : p.estado==='en_preparacion'
+            ? `<button class="btn block" style="margin-top:8px" onclick="marcarListo(${p.id})">✅ MARCAR COMO LISTO</button>`
+            : `<div class="pin">PIN ${p.pin}</div><button class="btn block" style="margin-top:8px" onclick="confirmarEntrega(${p.id})">🤝 CONFIRMAR ENTREGADO</button>`}
+      </div>`;
+    return `<div class="kds-bar">
+        <b>🍸 BARRA PRINCIPAL</b>
+        <span class="pill ok">🟢 Conectado en tiempo real</span>
+        <span class="pill warn" style="margin-left:auto">🔔 Sonido ON</span>
+        <button class="btn sm" onclick="lanzarPromo()">⚡ Lanzar promo</button>
+        <button class="btn sm" onclick="pausaStockBarra()">⏸️ Pausar producto agotado</button>
+      </div>
+    <div class="kds-cols">
+      ${cols.map(c=>`<div class="kds-col"><h3><span class="dotc" style="background:${c.color}"></span>${c.label} <span class="badge-num">${state.pedidos.filter(p=>p.estado===c.k).length}</span></h3>
+        ${state.pedidos.filter(p=>p.estado===c.k).map(kdsCard).join("") || '<div class="meta" style="color:var(--muted)">Sin pedidos</div>'}
+      </div>`).join("")}
+    </div>
+    <br>
+    <div class="grid cols-2">
+      <div class="card"><h3>Monitor de meseros</h3>
+        ${Object.entries(state.asignaciones).map(([ms,z])=>`<div class="list-item"><div class="body"><div class="title">${ms}</div><div class="meta">Zonas: ${z.join(", ")}</div></div><span class="pill info">En turno</span></div>`).join("")}
+      </div>
+      <div class="card"><h3>Resumen de turno</h3><div class="stat">42 tragos<small>servidos esta noche</small></div>
+        <div class="meta" style="margin-top:6px">Promedio de servido: 4 min 20s</div>
+        <div class="bar" style="margin-top:10px"><div style="width:78%"></div></div>
+        <button class="btn sm" style="margin-top:12px" onclick="toast('Resumen completo de turno')">📊 Ver detalle</button>
+      </div>
+    </div>`;
+  },
+
+  dj(){
+    const songs = [...state.canciones].sort((a,b)=> b.votos - a.votos);
+    return `<h1>Cola de canciones</h1><div class="sub">Ranking por votación de los clientes</div>
+    <div class="grid">
+      ${songs.map(c=>`<div class="list-item"><div class="body"><div class="title">${c.tema}</div>
+        <div class="meta">Mesa ${c.mesa} · votos ${c.votos}</div>
+        <div class="bar purple" style="margin-top:6px"><div style="width:${Math.min(100,c.votos/15*100)}%"></div></div>
+      </div>
+      <span class="badge-num">${c.votos}</span>
+      <span class="pill ${c.estado==='sonando'?'info':c.estado==='ya_puesta'?'mute':'warn'}">${c.estado.replace('_',' ')}</span>
+      ${c.estado==='pendiente'?`<button class="btn primary sm" onclick="ponerCancion(${c.id})">Poner</button>`:c.estado==='sonando'?`<button class="btn sm" onclick="confCancion(${c.id})">Ya la puse</button>`:''}
+      </div>`).join("")}
+    </div>`;
+  },
+
+  cliente(){
+    const tab = state.clientTab;
+    return `<div class="phone">
+      ${cHero()}
+      <div class="c-body">
+        ${tab==="menu" ? cMenu() : tab==="cuenta" ? cCuenta() : tab==="musica" ? cMusica() : cPerfil()}
+      </div>
+      ${tab==="menu" && state.carrito.length ? `<div class="float-account"><div class="inner"><span style="font-size:13px"><b>${state.carrito.length} art.</b> · ${currency(carritoSubtotal())}</span><button class="btn primary sm" onclick="checkout()">Continuar</button></div></div>` : ''}
+      ${cTabbar(tab)}
+    </div>`;
+  },
+
+  facturacion(){
+    return `<div class="row spread"><div><h1>Facturación electrónica</h1><div class="sub">DIAN — Documentos electrónicos emitidos</div></div>
+      <button class="btn primary" onclick="toast('Factura generada y enviada a la DIAN ✅','ok')">+ Nueva factura</button></div>
+    <div class="grid">
+      ${state.facturas.map(f=>`<div class="list-item"><div class="body"><div class="title">${f.id}</div><div class="meta">Mesa ${f.mesa} · ${f.cliente} · ${f.fecha}</div></div><span class="pill ${f.estado==='emitida'?'ok':'warn'}">${f.estado}</span><div class="stat" style="font-size:18px">${currency(f.total)}</div><button class="btn sm" onclick="toast('PDF descargado')">Descargar</button></div>`).join("")}
+    </div>
+    <br><div class="card"><h3>Estados ante la DIAN</h3>
+      <div class="timeline" style="border-left:2px solid var(--line);padding-left:14px;display:flex;flex-direction:column;gap:12px">
+        <div><b>Generar</b><div class="meta">Se crea el documento</div></div>
+        <div><b>Validar</b><div class="meta">Validación automática</div></div>
+        <div><b>Firmar</b><div class="meta">Firma digital del emisor</div></div>
+        <div><b>Entregar</b><div class="meta">PDF por email/WhatsApp o QR</div></div>
+      </div>
+    </div>`;
+  },
+
+  caja(){
+    const c = state.caja;
+    const totalZ = state.cierreZ.reduce((s,i)=>s+i.total,0);
+    return `<div class="row spread"><div><h1>Caja / Turno</h1><div class="sub">Turno ${c.turno} · Mesero ${c.mesero}</div></div>
+      ${c.turno==='abierto'? `<button class="btn danger" onclick="cerrarCaja()">Cerrar turno (Cierre Z)</button>` : `<span class="pill ok">Turno cerrado</span>`}</div>
+    <div class="grid cols-4">
+      <div class="card"><div class="stat">${currency(c.apertura)}<small>Arqueo inicial</small></div></div>
+      <div class="card"><div class="stat" style="color:var(--ok)">${currency(c.ingresos)}<small>Ingresos</small></div></div>
+      <div class="card"><div class="stat" style="color:var(--bad)">${currency(c.egresos)}<small>Egresos</small></div></div>
+      <div class="card"><div class="stat">${currency(c.ingresos-c.egresos)}<small>Neto</small></div></div>
+    </div>
+    <br><div class="card"><h3>Cierre Z — desglose por método de pago</h3>
+      <div class="meta" style="margin-bottom:10px">Total facturado: <b>${currency(totalZ)}</b></div>
+      ${state.cierreZ.map(z=>`<div class="list-item"><div class="body"><div class="title">${z.metodo}</div><div class="meta">${z.trx} transacciones</div></div><span class="stat" style="font-size:18px">${currency(z.total)}</span></div>`).join("")}
+      <div class="row" style="margin-top:12px">
+        <button class="btn sm" onclick="toast('Exportando Excel…')">📊 Excel</button>
+        <button class="btn sm" onclick="toast('Exportando PDF…')">📄 PDF</button>
+        <span class="pill ok" style="margin-left:auto">Propinas: ${currency(Math.round(totalZ*0.1))} a distribuir</span>
+      </div>
+    </div>`;
+  },
+
+  compras(){
+    return `<div class="row spread"><div><h1>Compras y proveedores</h1><div class="sub">Órdenes de compra automáticas por stock mínimo</div></div>
+      <button class="btn primary" onclick="toast('Orden de compra creada')">+ Orden de compra</button></div>
+    <div class="grid cols-2">
+      <div class="card"><h3>Proveedores</h3>
+        ${state.proveedores.map(p=>`<div class="list-item"><div class="body"><div class="title">${p}</div><div class="meta">Costo vs venta actualizado</div></div><button class="btn sm" onclick="toast('Editando proveedor')">Editar</button></div>`).join("")}
+      </div>
+      <div class="card"><h3>Órdenes de compra</h3>
+        ${state.compras.map(c=>`<div class="list-item"><div class="body"><div class="title">${c.producto} <span class="pill ${c.auto?'info':'mute'}" style="font-size:9px">${c.auto?'auto':'manual'}</span></div><div class="meta">${c.proveedor} · x${c.cant}</div></div><span class="pill ${c.estado==='recibida'?'ok':'warn'}">${c.estado}</span></div>`).join("")}
+      </div>
+    </div>`;
+  },
+
+  lealtad(){
+    return `<div class="row spread"><div><h1>Lealtad VIP</h1><div class="sub">Niveles y puntos de clientes registrados</div></div>
+      <button class="btn primary" onclick="toast('Regla de puntos creada')">+ Regla</button></div>
+    <div class="card" style="margin-bottom:14px"><h3>Cómo se calculan los puntos</h3>
+      <div class="row">
+        <span class="pill info">1 punto por cada $1.000 consumidos</span>
+        <span class="pill purple">Multiplicador: Bronce ×1 · Plata ×1.25 · Oro ×1.5 · Black ×2</span>
+        <span class="pill ok">+200 pts de bienvenida</span>
+      </div>
+      <div class="meta" style="margin-top:8px">Los puntos se acreditan al confirmarse el pago. Ej: $80.000 en nivel Oro = 80 × 1.5 = 120 pts.</div>
+    </div>
+    <div class="grid cols-4">
+      ${state.nivelesVIP.map((n,i)=>{const pts=[0,500,1500,3000][i]; return `<div class="card" style="text-align:center"><div class="stat" style="font-size:20px">${n}</div><div class="meta" style="color:var(--muted)">${pts}+ pts</div></div>`;}).join("")}
+    </div>
+    <br><div class="card"><h3>Clientes top</h3>
+      ${[["Andrés Gómez","Oro",1850],["María Pérez","Plata",720],["Julián Ríos","Bronce",310]].map(c=>`<div class="list-item"><div class="body"><div class="title">${c[0]}</div><div class="bar purple" style="margin-top:6px"><div style="width:${c[2]/2000*100}%"></div></div></div><span class="pill ${c[1]==='Oro'?'purple':c[1]==='Plata'?'info':'mute'}">${c[1]}</span><span class="meta">${c[2]} pts</span></div>`).join("")}
+    </div>`;
+  },
+
+  promos(){
+    return `<div class="row spread"><div><h1>Promociones</h1><div class="sub">Happy hour y precios dinámicos por horario</div></div>
+      <button class="btn primary" onclick="toast('Promoción creada')">+ Promoción</button></div>
+    <div class="grid">
+      ${state.promos.map(p=>`<div class="card"><h3>${p.nombre} <span class="pill ${p.activa?'ok':'mute'}">${p.activa?'Activa':'Pausada'}</span></h3>
+        <div class="meta">${p.desc}</div><br>
+        <button class="btn sm" onclick="toast('${p.activa?'Promo pausada':'Promo activada'}')">${p.activa?'Pausar':'Activar'}</button>
+      </div>`).join("")}
+    </div>`;
+  },
+
+  reservas(){
+    return `<div class="row spread"><div><h1>Reservas</h1><div class="sub">Reservas de mesas con pre-order</div></div>
+      <button class="btn primary" onclick="toast('Nueva reserva')">+ Reserva</button></div>
+    <div class="grid">
+      ${state.reservas.map(r=>`<div class="card"><h3>${r.cliente} <span class="pill ${r.estado==='confirmada'?'ok':'warn'}">${r.estado}</span></h3>
+        <div class="meta">${r.fecha} · ${r.personas} personas</div><br>
+        <div class="row"><button class="btn sm" onclick="toast('Reserva confirmada','ok')">Confirmar</button><button class="btn sm" onclick="toast('Detalle de reserva')">Detalle</button></div>
+      </div>`).join("")}
+    </div>`;
+  },
+
+  espera(){
+    return `<div class="row spread"><div><h1>Lista de espera</h1><div class="sub">Clientes esperando mesa disponible</div></div>
+      <button class="btn primary" onclick="toast('Grupo agregado')">+ Agregar grupo</button></div>
+    <div class="grid">
+      ${state.espera.map((g,i)=>`<div class="list-item"><div class="badge-num" style="font-size:16px">${i+1}</div><div class="body"><div class="title">${g.grupo}</div><div class="meta">${g.personas} personas · espera ${g.tiempo} min</div></div><button class="btn primary sm" onclick="toast('Mesa asignada a ${g.grupo}','ok')">Asignar mesa</button></div>`).join("")}
+    </div>`;
+  },
+
+  usuarios(){
+    const rolesLabel = {master:"Master", admin:"Admin", mesero:"Mesero", barman:"Barman", barra:"Barra", dj:"DJ", cajero:"Cajero"};
+    return `<div class="row spread"><div><h1>Usuarios y permisos</h1><div class="sub">Control de acceso y roles del personal</div></div>
+      <button class="btn primary" onclick="crearUsuario()">+ Usuario</button></div>
+    <div class="card">
+      ${state.usuarios.map(u=>`<div class="list-item"><div class="body"><div class="title">${u.nombre}</div><div class="meta">${u.email} · ${rolesLabel[u.rol]||u.rol}</div></div><span class="pill ${u.estado==='Activo'?'ok':'mute'}">${u.estado}</span><button class="btn sm" onclick="toast('Editando ${u.nombre}')">Editar</button></div>`).join("")}
+      <div class="pager"><span class="meta" style="font-size:12px">Registros:</span><select style="width:70px"><option>15</option><option>30</option><option>50</option></select><button>‹</button><button class="on">1</button><button>›</button></div>
+    </div>`;
+  },
+
+  config(){
+    return `<div class="row spread"><div><h1>Configuración</h1><div class="sub">Identidad de marca y textos editables (white-label)</div></div>
+      <button class="btn primary" onclick="guardarConfig()">Guardar cambios</button></div>
+    <div class="grid cols-2">
+      <div class="card"><h3>Logo e identidad</h3>
+        <div class="c-avatar" style="width:64px;height:64px;font-size:22px;margin-bottom:12px">${state.config.logo}</div>
+        <button class="btn sm" onclick="toast('Logo subido y comprimido a <200 KB (PNG/SVG/WEBP)')">Subir logo</button>
+        <label>Iniciales del logo</label><input id="cfgLogo" value="${state.config.logo}" />
+      </div>
+      <div class="card"><h3>Textos de bienvenida</h3>
+        <label>Nombre del bar</label><input id="cfgName" value="${state.config.barName}" />
+        <label>Mensaje al escanear QR</label><textarea id="cfgMsg" style="height:70px">${state.config.bienvenida}</textarea>
+        <div class="meta" style="margin-top:6px">Los cambios se aplican al instante sin reimprimir los QR (RF-E03).</div>
+      </div>
+    </div>
+    <br><div class="card"><h3>Vista previa del cliente</h3>
+      <div class="c-hero" style="border-radius:16px;max-width:360px">
+        <div class="c-top"><div class="c-avatar">${state.config.logo}</div><div style="flex:1"><div class="c-title">${state.config.barName}</div><div class="c-subtitle">${state.config.bienvenida}</div></div></div>
+      </div>
+    </div>`;
+  },
+
+  pagos(){
+    return `<h1>Pagos</h1><div class="sub">Registra el pago de una mesa (efectivo o digital)</div>
+    <div class="card"><h3>Nuevo pago</h3>
+      <div class="grid cols-2">
+        <div><label>Mesa</label><select><option>Mesa 2</option><option>Mesa 3</option></select></div>
+        <div><label>Método</label><select><option>Efectivo</option><option>Tarjeta</option><option>Nequi</option><option>PSE</option><option>Wompi (online)</option></select></div>
+      </div>
+      <label>Total</label><input value="$32.000" />
+      <br><br><button class="btn primary" onclick="registrarPago()">Registrar pago</button>
+    </div>
+    <br>
+    ${state.pagos.map(p=>`<div class="list-item"><div class="body"><div class="title">${p.mesero} — Mesa ${p.mesa}</div><div class="meta">${p.productos} · ${p.hora}</div></div><span class="pill ${p.metodo==='Efectivo'?'ok':p.metodo==='Nequi'?'purple':'info'}">${p.metodo}</span><div class="stat" style="font-size:18px">${currency(p.total)}</div></div>`).join("")}
+    `;
+  }
+};
+
+/* ===== Cliente ===== */
+const CAT_ICON = {"Cocteles":"🍹","Cervezas":"🍺","Licores":"🥃","Comidas":"🍕","Sin alcohol":"🥤"};
+function setClientTab(t){ state.clientTab = t; render(); }
+function setCat(c){ state.catActual = c; render(); }
+
+function cHero(){
+  return `<div class="c-hero">
+    <div class="c-top">
+      <div class="c-avatar">${state.config.logo}</div>
+      <div style="flex:1">
+        <div class="c-title">${state.config.barName}</div>
+        <div class="c-subtitle">Mesa ${state.miMesa} · ${state.config.bienvenida}</div>
+      </div>
+      ${state.registrado
+        ? `<span class="pill purple" style="z-index:1">${state.usuario.nivel}</span>`
+        : `<button class="btn sm" style="z-index:1" onclick="abrirRegistro()">👤 Regístrate</button>`}
+    </div>
+    ${state.registrado
+      ? `<div style="margin-top:8px; position:relative; z-index:1"><span class="c-pts">★ ${state.usuario.puntos} pts</span> <span style="font-size:11px;color:var(--muted)">· ${state.usuario.nombre}</span></div>`
+      : `<div style="margin-top:6px;font-size:11px;color:var(--muted);position:relative;z-index:1">Regístrate y gana <b style="color:var(--accent)">+200 pts</b></div>`}
+    <div class="c-search"><span>🔍</span><input placeholder="Buscar en el menú…" /></div>
+  </div>`;
+}
+
+function cMenu(){
+  const cat = state.catActual;
+  const ps = state.productos.filter(p=>p.cat===cat);
+  const reco = state.productos.filter(p=>p.cat!==cat).slice(0,3);
+  const flash = state.promosRelampago.length? `<div class="banner flash">⚡ <b>¡Promo Relámpago!</b> ${state.promosRelampago[state.promosRelampago.length-1]}</div>` : `<div class="banner">✨ <b>Happy Hour</b> 2x1 en cocteles · hasta las 8pm</div>`;
+  return `${flash}
+    <div class="c-chips">
+      ${state.categorias.map(c=>`<button class="c-chip ${c===cat?'on':''}" onclick="setCat('${c}')"><span class="ico">${CAT_ICON[c]}</span>${c}</button>`).join("")}
+    </div>
+    ${ps.map(p=> p.stock===0
+      ? `<div class="c-card" style="opacity:.45"><div class="c-img">${p.emoji}</div><div class="c-info"><div class="c-name">${p.nombre}</div><div class="c-desc">${p.cat}</div><div class="c-price">${currency(p.precio)}</div></div><span class="pill bad">Agotado</span></div>`
+      : `<div class="c-card" onclick="verProducto(${p.id})"><div class="c-img">${p.emoji}</div><div class="c-info"><div class="c-name">${p.nombre}</div><div class="c-desc">${p.cat} · ★ 4.8</div><div class="c-price">${currency(p.precio)}</div></div>
+          ${countInCart(p.id)>0 ? `<span class="qty" onclick="event.stopPropagation()"><button onclick="addCart(${p.id},-1);render()">−</button><span style="font-weight:700">${countInCart(p.id)}</span><button onclick="addCart(${p.id},1);render()">+</button></span>` : `<button class="add-btn" onclick="event.stopPropagation();addCart(${p.id},1);render()">+</button>`}
+        </div>`).join("")}
+    <div class="row" style="margin-top:8px">
+      <button class="btn sm" onclick="solicitar('Llamar mesero')">📣 Llamar mesero</button>
+      <button class="btn sm" onclick="solicitar('Pedir hielo extra')">🧊 Hielo</button>
+      <button class="btn sm" onclick="solicitar('Pedir vasos extra')">🥤 Vasos</button>
+    </div>
+    <div class="c-section">🔥 También te puede gustar</div>
+    <div class="hscroll">
+      ${reco.map(p=>`<div class="mini" onclick="verProducto(${p.id})"><div class="c-img">${p.emoji}</div><div style="font-size:12px;font-weight:700;margin-top:6px">${p.nombre}</div><div class="c-price" style="font-size:12px">${currency(p.precio)}</div><button class="add-btn" style="margin-top:6px;width:26px;height:26px;font-size:15px" onclick="event.stopPropagation();addCart(${p.id},1);render()">+</button></div>`).join("")}
+    </div>`;
+}
+
+function cCuenta(){
+  return `<div class="c-section">🧾 Mi cuenta <span class="pill info">${currency(cuentaTotal())}</span></div>
+    ${accountItems()}
+    <div class="card" style="margin-top:4px"><h3>Estado de tu pedido</h3>
+      <div class="timeline" style="border-left:2px solid var(--line);padding-left:14px;display:flex;flex-direction:column;gap:12px">
+        <div><b>Pedido recibido</b></div>
+        <div><b>En preparación</b><div class="meta">La barra está preparando tu orden</div></div>
+        <div><b>Listo / en tu mesa</b></div>
+      </div>
+    </div>
+    <div class="c-section">💳 Pagar</div>
+    <button class="btn primary block" onclick="checkout()">Pagar con Wompi / PSE / Nequi</button>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="dividirCuenta()">💸 Dividir cuenta</button>
+      <button class="btn" onclick="toast('Cuenta solicitada, el mesero va 🔔')">📣 Pedir cuenta</button>
+    </div>`;
+}
+
+function cMusica(){
+  return `<div class="c-section">🎵 Pide tu canción</div>
+    <div class="banner" style="margin-top:0">Vota por tus canciones favoritas, las más votadas suenan primero.</div>
+    ${state.canciones.map(c=>`<div class="c-card"><div class="c-img" style="font-size:20px">🎵</div><div class="c-info"><div class="c-name" style="font-size:13px">${c.tema}</div><div class="c-desc">Mesa ${c.mesa} · ${c.estado.replace('_',' ')}</div></div><span class="badge-num">${c.votos} ❤️</span><button class="btn sm ${state.votados.includes(c.id)?'primary':''}" onclick="votar(${c.id})">${state.votados.includes(c.id)?'Votado ✓':'Votar'}</button></div>`).join("")}
+    <div class="card" style="margin-top:6px"><h3>Solicitar canción</h3><input placeholder="Artista — Canción" /><br><br><button class="btn primary block" onclick="toast('Canción enviada al DJ 🎧')">Enviar al DJ</button></div>`;
+}
+
+function cPerfil(){
+  if(!state.registrado){
+    return `<div class="c-section">👤 Tu cuenta</div>
+      <div class="banner" style="margin-top:0">Crea tu cuenta y acumula <b>puntos</b> en cada visita, recibe ofertas y desbloquea beneficios <b>VIP</b>.</div>
+      <button class="btn primary block" onclick="abrirRegistro()">Registrarme</button>
+      <button class="btn block" style="margin-top:8px" onclick="abrirRegistro()">Iniciar sesión</button>`;
+  }
+  const idx = state.nivelesVIP.indexOf(state.usuario.nivel);
+  const nextPts = [0,500,1500,3000][idx+1];
+  const pct = Math.min(100, Math.round(state.usuario.puntos / (nextPts||3000) * 100));
+  return `<div class="c-section">👤 Mi perfil</div>
+    <div class="banner" style="margin-top:0; text-align:center">
+      <div class="c-avatar" style="margin:0 auto 8px;width:56px;height:56px;font-size:20px">${state.usuario.nombre[0]||'C'}</div>
+      <b style="font-size:16px">${state.usuario.nombre}</b>
+      <div style="margin-top:6px"><span class="pill purple">${state.usuario.nivel}</span></div>
+    </div>
+    <div class="card"><h3>Mis puntos <span class="c-pts">${state.usuario.puntos} pts</span></h3>
+      <div class="bar purple"><div style="width:${pct}%"></div></div>
+      <div class="meta" style="margin-top:6px">${nextPts ? (nextPts - state.usuario.puntos) + " pts para " + state.nivelesVIP[idx+1] : "Nivel máximo 🏆"}</div>
+    </div>
+    <button class="btn block" style="margin-top:10px" onclick="toast('Cerrando sesión')">Cerrar sesión</button>`;
+}
+
+function cTabbar(tab){
+  return `<div class="c-tabbar">
+    <button class="c-tab ${tab==='menu'?'on':''}" onclick="setClientTab('menu')"><span class="ico">🍽️</span>Menú</button>
+    <button class="c-tab ${tab==='cuenta'?'on':''}" onclick="setClientTab('cuenta')"><span class="ico">🧾</span>Cuenta${cuentaTotal()>0?'<span class="dot"></span>':''}</button>
+    <button class="c-tab ${tab==='musica'?'on':''}" onclick="setClientTab('musica')"><span class="ico">🎵</span>Música</button>
+    <button class="c-tab ${tab==='perfil'?'on':''}" onclick="setClientTab('perfil')"><span class="ico">👤</span>Perfil</button>
+  </div>`;
+}
+
+/* ===== Helpers / acciones ===== */
+function countInCart(pid){ const c = state.carrito.find(i=>i.pid===pid); return c?c.q:0; }
+function carritoSubtotal(){
+  return state.carrito.reduce((s,i)=> s + state.productos.find(x=>x.id===i.pid).precio*i.q, 0);
+}
+function cuentaTotal(){
+  const cuenta = state.miCuenta.reduce((s,i)=>s + i.precio*i.q, 0);
+  return cuenta + carritoSubtotal();
+}
+function accountItems(){
+  if(!state.miCuenta.length && !state.carrito.length) return `<div class="meta">Aún no has pedido nada.</div>`;
+  let html = "";
+  state.miCuenta.forEach(i=>{
+    const pill = i.estado==="servido"?"ok":i.estado==="en_preparacion"?"warn":"info";
+    html += `<div class="list-item" style="padding:8px"><div class="body"><div class="title" style="font-size:13px">${i.q}x ${i.p}</div></div><span class="pill ${pill}" style="font-size:10px">${i.estado.replace('_',' ')}</span><span class="meta">${currency(i.precio*i.q)}</span></div>`;
+  });
+  state.carrito.forEach(i=>{
+    const p = state.productos.find(x=>x.id===i.pid);
+    html += `<div class="list-item" style="padding:8px"><div class="body"><div class="title" style="font-size:13px">${i.q}x ${p.nombre}</div></div><span class="pill mute" style="font-size:10px">por enviar</span><span class="meta">${currency(p.precio*i.q)}</span></div>`;
+  });
+  return html;
+}
+
+function verProducto(id){
+  const p = state.productos.find(x=>x.id===id);
+  if(!p) return;
+  openModal(`<h2>${p.emoji} ${p.nombre}</h2>
+    <div class="meta" style="color:var(--muted);font-size:13px">${p.cat} · ${currency(p.precio)} · ★ 4.8</div>
+    <label>Marca / licor base</label><select><option>Estándar</option><option>Premium (+$5.000)</option><option>Importado (+$8.000)</option></select>
+    <label>Mezclador / acompañante</label><select><option>Tónica</option><option>Coca-Cola</option><option>Red Bull</option><option>Sin mezclador</option></select>
+    <label>Hielo</label><select><option>Mucho hielo</option><option>Poco hielo</option><option>Sin hielo</option></select>
+    <label>Vaso</label><select><option>Vaso de vidrio</option><option>Vaso plástico</option></select>
+    <br><button class="btn primary block" onclick="addCart(${p.id},1);closeModal();render();toast('Agregado con modificadores ✓','ok')">Agregar — ${currency(p.precio)}</button>`);
+}
+
+function addCart(pid, d){
+  const p = state.productos.find(x=>x.id===pid);
+  let c = state.carrito.find(i=>i.pid===pid);
+  if(!c){ c={pid, q:0}; state.carrito.push(c); }
+  c.q += d;
+  if(c.q<=0) state.carrito = state.carrito.filter(i=>i.pid!==pid);
+  render();
+}
+
+function checkout(){
+  const sub = carritoSubtotal();
+  const prop = Math.round(sub * state.propina/100);
+  const total = sub + prop;
+  openModal(`<h2>Confirmar pedido</h2>
+    <div class="meta" style="color:var(--muted);margin-bottom:8px">Mesa ${state.miMesa} · código se generará al pagar</div>
+    ${state.carrito.map(i=>{const p=state.productos.find(x=>x.id===i.pid); return `<div class="list-item" style="padding:8px"><div class="body"><div class="title" style="font-size:13px">${i.q}x ${p.nombre}</div></div><span class="meta">${currency(p.precio*i.q)}</span></div>`;}).join("")}
+    <label>Modo de entrega</label>
+    <div class="row">
+      <button class="btn sm ${state.modoEntrega==='mesa'?'primary':''}" onclick="setModo('mesa')">🍽️ Servicio a mesa</button>
+      <button class="btn sm ${state.modoEntrega==='pickup'?'primary':''}" onclick="setModo('pickup')">🏃 Express Pick-up</button>
+    </div>
+    <label>Propina voluntaria</label>
+    <div class="row">
+      ${[0,10,15,20].map(t=>`<button class="btn sm ${state.propina===t?'primary':''}" onclick="setPropina(${t})">${t===0?'Nada':t+'%'}</button>`).join("")}
+    </div>
+    <div class="list-item" style="margin-top:10px"><div class="body"><div class="title">Subtotal</div></div><span>${currency(sub)}</span></div>
+    <div class="list-item"><div class="body"><div class="title">Propina (${state.propina}%)</div></div><span>${currency(prop)}</span></div>
+    <div class="list-item"><div class="body"><div class="title" style="font-weight:700">Total</div></div><span class="stat" style="font-size:20px">${currency(total)}</span></div>
+    <button class="btn primary block" onclick="confirmarPedido()">💳 Pagar (Wompi · PSE · Nequi)</button>
+    <div class="meta" style="text-align:center;margin-top:8px">PCI-DSS: el pago se procesa en pasarela certificada</div>`);
+}
+function setModo(m){ state.modoEntrega = m; checkout(); }
+function setPropina(t){ state.propina = t; checkout(); }
+
+function confirmarPedido(){
+  const sub = carritoSubtotal();
+  const prop = Math.round(sub * state.propina/100);
+  const items = state.carrito.map(i=>{const p=state.productos.find(x=>x.id===i.pid); return {p:p.nombre,q:i.q};});
+  const codigo = "#B-0" + state.nextCodigo;
+  const pin = Math.floor(1000 + Math.random()*9000);
+  const zona = state.mesas.find(m=>m.id===state.miMesa)?.zona || "Pista";
+  state.pedidos.push({id:200+state.nextCodigo, codigo, mesa:state.miMesa, zona, items, estado:"recibido", mesero:"Laura", total:sub+prop, modo:state.modoEntrega, min:0, pin});
+  state.nextCodigo++;
+  state.carrito = [];
+  closeModal(); render();
+  openModal(`<h2>✅ Pago confirmado</h2>
+    <p style="color:var(--muted);font-size:13px">Tu comanda fue enviada a la barra en tiempo real.</p>
+    <div class="pin">${codigo}</div>
+    <div class="meta" style="text-align:center">PIN de entrega: <b style="letter-spacing:3px">${pin}</b></div>
+    <br><button class="btn primary block" onclick="closeModal()">Listo</button>`);
+  toast("Comanda "+codigo+" enviada a barra 🍸", "ok");
+}
+
+function abrirRegistro(){
+  openModal(`<h2>Tu cuenta KLUBB</h2>
+    <p style="color:var(--muted);font-size:13px">Registrarte te permite acumular puntos y ver tu historial. También puedes seguir como invitado.</p>
+    <div class="row" style="justify-content:center">
+      <button id="tabLogin" onclick="swapRegistro('login')">Iniciar sesión</button>
+      <button id="tabReg" class="primary" onclick="swapRegistro('registro')">Registrarme</button>
+    </div>
+    <div id="regForm"></div>
+    <br><button class="btn block" onclick="closeModal(); toast('Continuando como invitado')">Continuar como invitado</button>`);
+  swapRegistro('registro');
+}
+function swapRegistro(mode){
+  const el = document.getElementById("regForm");
+  if(!el) return;
+  document.getElementById("tabLogin").className = "btn" + (mode==="login"?" primary":"");
+  document.getElementById("tabReg").className = "btn" + (mode==="registro"?" primary":"");
+  el.innerHTML = mode==="login"
+    ? `<label>Email o celular</label><input placeholder="correo@ejemplo.com" /><label>Contraseña</label><input type="password" placeholder="••••••" /><br><br><button class="btn primary block" onclick="doLogin()">Entrar</button>`
+    : `<label>Nombre</label><input id="regNombre" placeholder="Tu nombre" /><label>Email o celular</label><input placeholder="correo@ejemplo.com" /><label>Contraseña</label><input type="password" placeholder="••••••" /><br><br><button class="btn primary block" onclick="doRegister()">Crear cuenta</button>`;
+}
+function doLogin(){ state.registrado=true; state.usuario.nombre="Cliente"; closeModal(); render(); toast("Bienvenido de nuevo 👋","ok"); }
+function doRegister(){
+  const n = document.getElementById("regNombre")?.value || "Cliente";
+  state.registrado=true; state.usuario.nombre=n; state.usuario.puntos += 200;
+  closeModal(); render(); toast("Cuenta creada · +200 pts de bienvenida 🎉","ok");
+}
+function pagarCuenta(){ checkout(); }
+
+function solicitar(tipo){
+  state.solicitudes.push({id:Date.now(), mesa:state.miMesa, tipo, tiempo:"ahora"});
+  toast(tipo+" enviado al mesero 📣");
+}
+function atenderSolicitud(id){
+  state.solicitudes = state.solicitudes.filter(s=>s.id!==id);
+  render(); toast("Solicitud atendida ✓","ok");
+}
+
+function votar(id){
+  if(state.votados.includes(id)) return;
+  state.votados.push(id);
+  state.canciones.find(x=>x.id===id).votos++;
+  render();
+  toast("Voto registrado 🎵", "ok");
+}
+function dividirCuenta(){
+  const total = cuentaTotal() || 62000;
+  openModal(`<h2>Dividir cuenta — Mesa ${state.miMesa}</h2>
+    <p style="color:var(--muted);font-size:13px">Total: ${currency(total)}</p>
+    <label>¿Cuántas personas?</label><select id="divN">${[2,3,4,5].map(n=>`<option>${n}</option>`).join("")}</select>
+    <br><br><div id="divRes"></div>
+    <button class="btn primary block" onclick="calcDiv()">Calcular</button>
+    <br><br><button class="btn block" onclick="closeModal(); toast('Pago dividido enviado','ok')">Confirmar división</button>`);
+  setTimeout(calcDiv, 50);
+}
+function calcDiv(){
+  const n = parseInt(document.getElementById("divN")?.value || 2);
+  const total = cuentaTotal() || 62000;
+  document.getElementById("divRes").innerHTML = `${n} personas · ${currency(Math.round(total/n))} c/u`;
+}
+
+function crearZona(){ openModal(`<h2>Nueva zona</h2><label>Nombre</label><input placeholder="Ej: VIP Nivel 2" /><br><br><button class="btn primary block" onclick="closeModal(); toast('Zona creada')">Crear zona</button>`); }
+function crearMesa(){
+  const id = state.mesas.length+1;
+  const qr = "KLB-m"+id;
+  state.mesas.push({id, zona:state.zonas[0], estado:"libre", mesero:"", qr});
+  render();
+  openModal(`<h2>Mesa ${id} creada</h2>
+    <p style="color:var(--muted); font-size:13px">Imprime este QR y pégalo en la mesa. Es único.</p>
+    <div class="qr"><div class="mock">${mockQR(qr)}</div><div class="url">klubb.app/m/${qr}</div></div>
+    <label>Zona</label><select>${state.zonas.map(z=>`<option>${z}</option>`).join("")}</select>
+    <label>Asignar mesero</label><select><option>Laura</option><option>Carlos</option><option>Sin asignar</option></select>
+    <br><br><button class="btn primary block" onclick="closeModal(); toast('Mesa ${id} guardada y QR listo')">Descargar / Guardar</button>`);
+}
+function verMesa(id){
+  const m = state.mesas.find(x=>x.id===id);
+  openModal(`<h2>Mesa ${m.id}</h2>
+    <div class="row"><span class="pill ${m.estado==='libre'?'ok':'warn'}">${m.estado}</span></div>
+    <label>Zona</label><select>${state.zonas.map(z=>`<option ${z===m.zona?'selected':''}>${z}</option>`).join("")}</select>
+    <label>Estado</label><select><option>Libre</option><option>Ocupada</option><option>Pidiendo</option></select>
+    <label>Mesero asignado</label><select><option>Laura</option><option>Carlos</option><option>Sin asignar</option></select>
+    <br><br><div class="qr"><div class="mock">${mockQR(m.qr)}</div><div class="url">klubb.app/m/${m.qr}</div></div>
+    <button class="btn block" onclick="closeModal(); toast('Mesa actualizada')">Guardar cambios</button>`);
+}
+function crearProducto(){
+  openModal(`<h2>Nuevo producto</h2>
+    <label>Categoría</label><select>${state.categorias.map(c=>`<option>${c}</option>`).join("")}</select>
+    <label>Nombre</label><input placeholder="Ej: Margarita" />
+    <div class="grid cols-2">
+      <div><label>Precio venta</label><input placeholder="25000" /></div>
+      <div><label>Costo</label><input placeholder="7000" /></div>
+    </div>
+    <label>Stock inicial</label><input placeholder="20" />
+    <label>Stock mínimo (alerta)</label><input placeholder="5" />
+    <br><br><button class="btn primary block" onclick="closeModal(); toast('Producto creado')">Crear</button>`);
+}
+function crearUsuario(){
+  openModal(`<h2>Nuevo usuario</h2>
+    <label>Nombre completo</label><input placeholder="Nombre" />
+    <label>Correo</label><input placeholder="correo@bar.com" />
+    <label>Rol</label><select><option>Administrador</option><option>Cajero</option><option>Bartender</option><option>Mesero</option><option>DJ</option></select>
+    <label>Estado</label><select><option>Activo</option><option>Inactivo</option></select>
+    <br><br><button class="btn primary block" onclick="closeModal(); toast('Usuario creado')">Crear usuario</button>`);
+}
+function guardarConfig(){
+  state.config.logo = document.getElementById("cfgLogo")?.value || state.config.logo;
+  state.config.barName = document.getElementById("cfgName")?.value || state.config.barName;
+  state.config.bienvenida = document.getElementById("cfgMsg")?.value || state.config.bienvenida;
+  render(); toast("Configuración guardada y aplicada al instante", "ok");
+}
+
+function pausarStock(id){
+  const p = state.productos.find(x=>x.id===id);
+  p.stock = p.stock===0 ? p.min : 0;
+  render(); toast(p.nombre + (p.stock===0?" pausado (agotado)":" reactivado"));
+}
+function pausaStockBarra(){
+  openModal(`<h2>⏸️ Pausar producto agotado</h2>
+    <p style="color:var(--muted);font-size:13px">El producto desaparece al instante de la carta del cliente.</p>
+    ${state.productos.map(p=>`<div class="list-item" style="padding:8px"><div class="body"><div class="title" style="font-size:13px">${p.emoji} ${p.nombre}</div></div><span class="pill ${p.stock===0?'bad':'ok'}">${p.stock===0?'Agotado':'Activo'}</span><button class="btn sm" onclick="pausarStock(${p.id});pausaStockBarra()">${p.stock===0?'Activar':'Pausar'}</button></div>`).join("")}
+    <br><button class="btn block" onclick="closeModal()">Cerrar</button>`);
+}
+function lanzarPromo(){
+  openModal(`<h2>⚡ Promo Relámpago</h2>
+    <label>Texto de la promo</label><input id="promoTxt" placeholder="Ej: 2x1 en Margaritas por 30 min" />
+    <br><br><button class="btn primary block" onclick="doLanzarPromo()">Lanzar promo a todos los clientes</button>`);
+}
+function doLanzarPromo(){
+  const t = document.getElementById("promoTxt")?.value || "2x1 en Margaritas";
+  state.promosRelampago.push(t);
+  closeModal(); render();
+  toast("Promo lanzada: banner flotante en la app de clientes ⚡", "ok");
+}
+
+function preparar(id){ const p=state.pedidos.find(x=>x.id===id); p.estado="en_preparacion"; render(); toast(p.codigo+" en preparación"); }
+function marcarListo(id){
+  const p=state.pedidos.find(x=>x.id===id); p.estado="listo"; render();
+  if(p.modo==="mesa") toast("¡Listo! Notificando a "+p.mesero+" (mesero asignado) 🔔", "ok");
+  else toast("¡Listo! Notificando al cliente para retiro en barra 📱", "ok");
+}
+function confirmarEntrega(id){
+  const p=state.pedidos.find(x=>x.id===id);
+  openModal(`<h2>Confirmar entrega</h2>
+    <div class="meta" style="text-align:center">Comanda ${p.codigo} · Mesa ${p.mesa}</div>
+    <div class="pin">PIN ${p.pin}</div>
+    <p style="color:var(--muted);font-size:13px">Solicita al cliente/mesero el PIN o escanea el QR de la comanda.</p>
+    <button class="btn primary block" onclick="entregar(${p.id})">✅ Confirmar entregado (PIN válido)</button>`);
+}
+function entregar(id){ const p=state.pedidos.find(x=>x.id===id); p.estado="entregado"; closeModal(); render(); toast(p.codigo+" entregado"); }
+function registrarPago(){
+  state.pagos.push({id:504, mesero:"Laura", mesa:2, metodo:"Efectivo", total:32000, productos:"4x Club Colombia", hora:"23:00"});
+  render(); toast("Pago registrado", "ok");
+}
+function ponerCancion(id){ state.canciones.find(x=>x.id===id).estado="sonando"; render(); toast("Reproduciendo…"); }
+function confCancion(id){ state.canciones.find(x=>x.id===id).estado="ya_puesta"; render(); toast("Confirmado al cliente"); }
+function cerrarCaja(){ state.caja.turno="cerrado"; render(); toast("Cierre Z generado: reporte PDF/Excel listo", "ok"); }
+
+function mockQR(code){
+  return "■".repeat(6)+"\n"+Array.from(code).map(()=>"██ ██ █").join("\n")+"\n"+"■".repeat(6);
+}
+
+render();
+</script>
+</body>
+</html>
