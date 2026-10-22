@@ -9,8 +9,8 @@ COPY apps/cliente-pwa/package.json apps/cliente-pwa/
 RUN npm install
 
 COPY . .
-RUN npm run build -w apps/api
 RUN cd apps/api && npx prisma generate
+RUN npm run build -w apps/api
 
 # ---------- Runtime ----------
 FROM node:20-slim
