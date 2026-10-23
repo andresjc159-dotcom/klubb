@@ -27,9 +27,11 @@ export default function Caja() {
   const [base, setBase] = useState('300000');
   const [metodos, setMetodos] = useState<string[]>([]);
   const [movimientos, setMovimientos] = useState<any[]>([]);
+  const [productos, setProductos] = useState<any[]>([]);
+  const [meseros, setMeseros] = useState<any[]>([]);
   const [pagoModal, setPagoModal] = useState<any>(null);
   const [pagoMetodo, setPagoMetodo] = useState('EFECTIVO');
-  const [movForm, setMovForm] = useState<{ tipo: string; monto: string; concepto: string } | null>(null);
+  const [movForm, setMovForm] = useState<{ tipo: string; monto: string; concepto: string; productoId: string; cantidad: string; metodo: string } | null>(null);
 
   const cargarMetodos = useCallback(() => {
     if (!puedeConfigurar) return;
@@ -55,21 +57,13 @@ export default function Caja() {
   }
 
   const cargar = useCallback(() => {
-    Promise.all([
-      api('/caja/actual'),
-      api('/caja/resumen'),
-      api('/pedidos'),
-      api('/caja/historial'),
-      api('/caja/movimientos'),
-    ])
-      .then(([a, r, p, h, m]) => {
-        setActual(a);
-        setResumen(r);
-        setPedidos(p);
-        setHistorial(h);
-        setMovimientos(m);
-      })
-      .catch(console.error);
+    api('/caja/actual').then(setActual).catch(() => setActual(null));
+    api('/caja/resumen').then(setResumen).catch(() => {});
+    api('/pedidos').then(setPedidos).catch(() => {});
+    api('/caja/historial').then(setHistorial).catch(() => {});
+    api('/caja/movimientos').then(setMovimientos).catch(() => {});
+    api('/productos').then(setProductos).catch(() => {});
+    api('/caja/meseros').then(setMeseros).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -136,10 +130,27 @@ export default function Caja() {
     try {
       await api('/caja/movimientos', {
         method: 'POST',
-        body: JSON.stringify({ tipo: movForm.tipo, monto: Number(movForm.monto), concepto: movForm.concepto }),
+        body: JSON.stringify({
+          tipo: movForm.tipo,
+          monto: Number(movForm.monto),
+          concepto: movForm.concepto,
+          metodo: movForm.metodo || undefined,
+          productoId: movForm.productoId || undefined,
+          cantidad: movForm.productoId ? Number(movForm.cantidad || 0) : undefined,
+        }),
       });
       toast('Movimiento registrado', 'ok');
       setMovForm(null);
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
+  async function guardarBaseMesero(id: string, nombre: string, base: number) {
+    try {
+      await api(`/caja/meseros/${id}`, { method: 'PATCH', body: JSON.stringify({ base }) });
+      toast(`Base de ${nombre} actualizada`, 'ok');
       cargar();
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
@@ -247,6 +258,33 @@ export default function Caja() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
+        <h3>Base de meseros</h3>
+        <div className="sub" style={{ marginBottom: 10 }}>
+          Define la base (sueldo base) de cada mesero. Déjalo en 0 si no aplica.
+        </div>
+        {meseros.length === 0 && <div className="sub">No hay meseros activos.</div>}
+        {meseros.map((m) => (
+          <div className="list-item" key={m.id}>
+            <div className="emoji-tile"><UserRound size={18} color="#8b95a6" /></div>
+            <div className="body">
+              <div className="title">{m.nombre}</div>
+              <div className="meta">Base actual: {fmt(m.base ?? 0)}</div>
+            </div>
+            <input
+              key={`${m.id}-${m.base}`}
+              type="number"
+              defaultValue={m.base ?? 0}
+              style={{ width: 120 }}
+              onBlur={(e) => {
+                const val = Number(e.target.value);
+                if (val !== (m.base ?? 0)) guardarBaseMesero(m.id, m.nombre, val);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
         <h3>Pedidos por mesa</h3>
         {Object.keys(porMesa).length === 0 && <div className="sub">No hay pedidos activos.</div>}
         {Object.entries(porMesa).map(([mesa, ps]) => (
@@ -293,8 +331,8 @@ export default function Caja() {
         <div className="card">
           <h3>Movimientos de caja</h3>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button className="btn sm" onClick={() => setMovForm({ tipo: 'INGRESO', monto: '', concepto: '' })}>+ Ingreso</button>
-            <button className="btn sm" onClick={() => setMovForm({ tipo: 'EGRESO', monto: '', concepto: '' })}>− Egreso</button>
+            <button className="btn sm" onClick={() => setMovForm({ tipo: 'INGRESO', monto: '', concepto: '', productoId: '', cantidad: '1', metodo: 'EFECTIVO' })}>+ Ingreso</button>
+            <button className="btn sm" onClick={() => setMovForm({ tipo: 'EGRESO', monto: '', concepto: '', productoId: '', cantidad: '1', metodo: 'EFECTIVO' })}>− Egreso</button>
           </div>
           {movimientos.length === 0 && <div className="sub">Sin movimientos.</div>}
           {movimientos.map((m: any) => (
@@ -434,9 +472,30 @@ export default function Caja() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>{movForm.tipo === 'INGRESO' ? 'Registrar ingreso' : 'Registrar egreso'}</h2>
             <label>Concepto</label>
-            <input value={movForm.concepto} onChange={(e) => setMovForm({ ...movForm, concepto: e.target.value })} placeholder="Ej: compra de hielo" autoFocus />
-            <label>Monto</label>
+            <input value={movForm.concepto} onChange={(e) => setMovForm({ ...movForm, concepto: e.target.value })} placeholder={movForm.tipo === 'INGRESO' ? 'Ej: venta directa, propina, etc.' : 'Ej: compra de hielo'} autoFocus />
+            <label>Monto (COP)</label>
             <input type="number" value={movForm.monto} onChange={(e) => setMovForm({ ...movForm, monto: e.target.value })} placeholder="0" />
+            <label>Método de pago</label>
+            <select value={movForm.metodo} onChange={(e) => setMovForm({ ...movForm, metodo: e.target.value })}>
+              {METODOS_TODOS.map((m) => <option key={m} value={m}>{METODO_LABEL[m]}</option>)}
+            </select>
+            {movForm.tipo === 'INGRESO' && (
+              <>
+                <label>¿Qué se vendió? (opcional, descuenta del inventario)</label>
+                <select value={movForm.productoId} onChange={(e) => setMovForm({ ...movForm, productoId: e.target.value })}>
+                  <option value="">— Sin producto —</option>
+                  {productos.map((p) => (
+                    <option key={p.id} value={p.id}>{p.emoji || '🍸'} {p.nombre} (stock {p.stock})</option>
+                  ))}
+                </select>
+                {movForm.productoId && (
+                  <>
+                    <label>Cantidad</label>
+                    <input type="number" min={1} value={movForm.cantidad} onChange={(e) => setMovForm({ ...movForm, cantidad: e.target.value })} placeholder="1" />
+                  </>
+                )}
+              </>
+            )}
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={registrarMovimiento}>
               Guardar
             </button>

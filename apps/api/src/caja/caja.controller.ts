@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -194,6 +195,8 @@ export class CajaController {
       monto: number;
       metodo?: string;
       concepto?: string;
+      productoId?: string;
+      cantidad?: number;
     },
   ) {
     const tenantId = tenantEfectivo(req.user);
@@ -203,7 +206,8 @@ export class CajaController {
       where: { tenantId, cerradaEn: null },
     });
     if (!caja) throw new BadRequestException('No hay caja abierta');
-    return this.prisma.cajaMovimiento.create({
+
+    const movimiento = await this.prisma.cajaMovimiento.create({
       data: {
         cajaId: caja.id,
         tipo: body.tipo === 'EGRESO' ? 'EGRESO' : 'INGRESO',
@@ -211,6 +215,51 @@ export class CajaController {
         metodo: (body.metodo as any) || null,
         concepto: body.concepto,
       },
+    });
+
+    if (body.tipo !== 'EGRESO' && body.productoId && body.cantidad) {
+      const producto = await this.prisma.producto.findFirst({
+        where: { id: body.productoId, tenantId },
+      });
+      if (!producto) throw new BadRequestException('Producto no encontrado');
+      const cant = Number(body.cantidad);
+      if (cant <= 0) throw new BadRequestException('Cantidad inválida');
+      await this.prisma.producto.update({
+        where: { id: body.productoId },
+        data: { stock: { decrement: cant } },
+      });
+      await this.prisma.movimientoInventario.create({
+        data: {
+          tenantId,
+          productoId: body.productoId,
+          tipo: 'VENTA',
+          cantidad: -cant,
+        },
+      });
+    }
+
+    return movimiento;
+  }
+
+  @Get('meseros')
+  async meseros(@Req() req: any) {
+    const tenantId = tenantEfectivo(req.user);
+    return this.prisma.user.findMany({
+      where: { tenantId, role: Role.MESERO, activo: true },
+      select: { id: true, nombre: true, base: true },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  @Patch('meseros/:id')
+  async editarBaseMesero(
+    @Param('id') id: string,
+    @Body() body: { base: number },
+  ) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { base: Number(body.base ?? 0) },
+      select: { id: true, nombre: true, base: true },
     });
   }
 
