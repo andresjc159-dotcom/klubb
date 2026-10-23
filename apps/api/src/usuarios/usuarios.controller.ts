@@ -62,12 +62,17 @@ export class UsuariosController {
     if (!body.nombre || !body.email || !body.password || !body.role) {
       throw new BadRequestException('Nombre, email, contraseña y rol son requeridos');
     }
+    const esMaster = req.user.role === Role.MASTER;
+    if (!esMaster && body.role === Role.MASTER) {
+      throw new BadRequestException('Solo el master puede crear usuarios master');
+    }
     const exists = await this.prisma.user.findUnique({ where: { email: body.email } });
     if (exists) {
       throw new BadRequestException('El email ya está registrado');
     }
     const passwordHash = await bcrypt.hash(body.password, 10);
-    const tenantId = body.tenantId || tenantEfectivo(req.user) || null;
+    // El admin solo crea usuarios para su propio local; el master elige el local.
+    const tenantId = esMaster ? body.tenantId ?? null : tenantEfectivo(req.user) ?? null;
     return this.prisma.user.create({
       data: {
         nombre: body.nombre,
@@ -84,6 +89,7 @@ export class UsuariosController {
 
   @Patch(':id')
   async editar(
+    @Req() req: any,
     @Param('id') id: string,
     @Body()
     body: {
@@ -97,6 +103,23 @@ export class UsuariosController {
       base?: number;
     },
   ) {
+    const esMaster = req.user.role === Role.MASTER;
+    const objetivo = await this.prisma.user.findUnique({ where: { id } });
+    if (!objetivo) throw new BadRequestException('Usuario no encontrado');
+
+    if (!esMaster) {
+      const miTenant = tenantEfectivo(req.user);
+      if (objetivo.tenantId !== miTenant) {
+        throw new BadRequestException('No puedes editar usuarios de otro local');
+      }
+      if (body.tenantId !== undefined && body.tenantId !== miTenant) {
+        throw new BadRequestException('No puedes mover un usuario a otro local');
+      }
+      if (body.role === Role.MASTER) {
+        throw new BadRequestException('Solo el master puede asignar el rol master');
+      }
+    }
+
     const data: any = {};
     if (body.nombre !== undefined) data.nombre = body.nombre;
     if (body.email !== undefined) data.email = body.email;
@@ -114,7 +137,15 @@ export class UsuariosController {
   }
 
   @Delete(':id')
-  async desactivar(@Param('id') id: string) {
+  async desactivar(@Req() req: any, @Param('id') id: string) {
+    const esMaster = req.user.role === Role.MASTER;
+    if (!esMaster) {
+      const objetivo = await this.prisma.user.findUnique({ where: { id } });
+      if (!objetivo) throw new BadRequestException('Usuario no encontrado');
+      if (objetivo.tenantId !== tenantEfectivo(req.user)) {
+        throw new BadRequestException('No puedes desactivar usuarios de otro local');
+      }
+    }
     return this.prisma.user.update({
       where: { id },
       data: { activo: false },
