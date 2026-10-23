@@ -430,7 +430,6 @@ model ConfigPuntos {
   puntosBase Int          @default(1)
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
-  niveles    NivelPuntos[]
 }
 
 model NivelPuntos {

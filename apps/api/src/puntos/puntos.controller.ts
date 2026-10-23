@@ -32,12 +32,16 @@ export class PuntosController {
   @Get()
   async get(@Req() req: any) {
     const tenantId = await this.miTenant(req);
-    return this.prisma.configPuntos.upsert({
+    const config = await this.prisma.configPuntos.upsert({
       where: { tenantId },
       update: {},
       create: { tenantId },
-      include: { niveles: { orderBy: { orden: 'asc' } } },
     });
+    const niveles = await this.prisma.nivelPuntos.findMany({
+      where: { tenantId },
+      orderBy: { orden: 'asc' },
+    });
+    return { ...config, niveles };
   }
 
   @Patch()
