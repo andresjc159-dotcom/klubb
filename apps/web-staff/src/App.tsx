@@ -17,6 +17,7 @@ import Recetas from './pages/Recetas';
 import Config from './pages/Config';
 import Puntos from './pages/Puntos';
 import Promociones from './pages/Promociones';
+import Reportes from './pages/Reportes';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="recetas" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Recetas /></RoleRoute>} />
               <Route path="puntos" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Puntos /></RoleRoute>} />
               <Route path="promociones" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Promociones /></RoleRoute>} />
+              <Route path="reportes" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Reportes /></RoleRoute>} />
               <Route path="config" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Config /></RoleRoute>} />
               <Route path="kds" element={<RoleRoute roles={['ADMIN', 'MASTER', 'BARRA', 'BARMAN', 'COCINA']}><KDS /></RoleRoute>} />
               <Route path="caja" element={<RoleRoute roles={['ADMIN', 'MASTER', 'CAJERO']}><Caja /></RoleRoute>} />

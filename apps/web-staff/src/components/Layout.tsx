@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import {
   Armchair,
   Award,
+  BarChart3,
   Boxes,
   ChefHat,
   ClipboardList,
@@ -77,6 +78,7 @@ export default function Layout() {
     { to: '/recetas', label: 'Recetas', Icon: ChefHat, show: operaLocal },
     { to: '/puntos', label: 'Puntos', Icon: Award, show: operaLocal },
     { to: '/promociones', label: 'Promociones', Icon: Tag, show: operaLocal },
+    { to: '/reportes', label: 'Reportes', Icon: BarChart3, show: operaLocal },
     { to: '/kds', label: 'Pedidos (KDS)', Icon: Martini, show: operaLocal || isBarra },
     { to: '/caja', label: 'Caja', Icon: Wallet, show: operaLocal || isCajero },
     { to: '/usuarios', label: 'Usuarios', Icon: Users, show: operaLocal },
