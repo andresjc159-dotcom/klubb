@@ -4,7 +4,7 @@ import { Armchair, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../components/Toast';
 
-const CLIENT_URL = 'http://localhost:5174';
+const CLIENT_URL = window.location.origin;
 
 function Modal({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
