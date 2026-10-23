@@ -26,7 +26,7 @@ export async function api<T = any>(
 
   if (res.status === 401) {
     clearToken();
-    window.location.href = '/login';
+    window.location.href = '/staff/login';
     throw new Error('No autorizado');
   }
 

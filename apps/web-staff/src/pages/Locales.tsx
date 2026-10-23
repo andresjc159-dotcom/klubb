@@ -34,7 +34,7 @@ export default function Locales() {
     try {
       const data = await api<{ access_token: string }>(`/locales/${id}/entrar`, { method: 'POST' });
       setToken(data.access_token);
-      window.location.href = '/';
+      window.location.href = '/staff/';
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
     }
