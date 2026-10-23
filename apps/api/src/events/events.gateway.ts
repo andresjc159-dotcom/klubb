@@ -26,12 +26,12 @@ export class EventsGateway
 
   constructor(private config: ConfigService) {}
 
-  afterInit(server: Server) {
+  afterInit() {
     const redisUrl = this.config.get<string>('REDIS_URL');
-    if (redisUrl) {
+    if (redisUrl && this.server) {
       const pubClient = new Redis(redisUrl);
       const subClient = pubClient.duplicate();
-      server.adapter(createAdapter(pubClient, subClient));
+      this.server.adapter(createAdapter(pubClient, subClient));
       this.logger.log('Redis adapter activado para Socket.IO');
     }
   }
