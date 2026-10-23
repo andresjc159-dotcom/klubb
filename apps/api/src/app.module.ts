@@ -16,6 +16,9 @@ import { InsumosModule } from './insumos/insumos.module';
 import { PuntosModule } from './puntos/puntos.module';
 import { PromocionesModule } from './promociones/promociones.module';
 import { ReportesModule } from './reportes/reportes.module';
+import { ReservasModule } from './reservas/reservas.module';
+import { ComprasModule } from './compras/compras.module';
+import { EncuestasModule } from './encuestas/encuestas.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -37,6 +40,9 @@ import { AppController } from './app.controller';
     PuntosModule,
     PromocionesModule,
     ReportesModule,
+    ReservasModule,
+    ComprasModule,
+    EncuestasModule,
   ],
   controllers: [AppController],
 })

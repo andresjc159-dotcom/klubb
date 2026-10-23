@@ -36,6 +36,45 @@ export default function Reportes() {
   const maxDia = Math.max(1, ...(data?.ventasPorDia || []).map((d: any) => d.total));
   const maxTop = Math.max(1, ...(data?.topProductos || []).map((p: any) => p.cantidad));
 
+  function descargarCSV() {
+    if (!data) return;
+    const rows: string[][] = [];
+    rows.push(['Reporte KLUBB', `${data.rango.desde} a ${data.rango.hasta}`]);
+    rows.push([]);
+    rows.push(['Ventas totales', String(data.ventas.total)]);
+    rows.push(['Pedidos', String(data.ventas.pedidos)]);
+    rows.push(['Ticket promedio', String(data.ventas.ticketPromedio)]);
+    rows.push(['Ganancia', String(data.margen.ganancia)]);
+    rows.push(['Margen %', String(data.margen.porcentaje)]);
+    rows.push([]);
+    rows.push(['Top productos', '', '']);
+    rows.push(['Producto', 'Cantidad', 'Total']);
+    data.topProductos.forEach((p: any) => rows.push([p.nombre, String(p.cantidad), String(p.total)]));
+    rows.push([]);
+    rows.push(['Ventas por día', '', '']);
+    rows.push(['Fecha', 'Total', 'Pedidos']);
+    data.ventasPorDia.forEach((d: any) => rows.push([d.fecha, String(d.total), String(d.pedidos)]));
+    rows.push([]);
+    rows.push(['Ventas por hora', '', '']);
+    rows.push(['Hora', 'Total', '']);
+    data.ventasPorHora.forEach((h: any) => rows.push([String(h.hora), String(h.total), '']));
+    rows.push([]);
+    rows.push(['Por mesero', '', '']);
+    rows.push(['Mesero', 'Total', 'Pedidos']);
+    data.ventasPorMesero.forEach((m: any) => rows.push([m.nombre, String(m.total), String(m.pedidos)]));
+
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${data.rango.desde}-${data.rango.hasta}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <div className="topbar">
@@ -47,6 +86,7 @@ export default function Reportes() {
           <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           <span className="sub">a</span>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          <button className="btn" onClick={descargarCSV}>Descargar CSV</button>
           <button className="btn primary" onClick={cargar} disabled={cargando}>
             {cargando ? 'Cargando…' : 'Actualizar'}
           </button>

@@ -139,6 +139,9 @@ export default function App() {
   const [tema, setTema] = useState('');
   const [aviso, setAviso] = useState('');
   const [nivelUp, setNivelUp] = useState<any>(null);
+  const [encuestaModal, setEncuestaModal] = useState(false);
+  const [estrellas, setEstrellas] = useState(5);
+  const [comentario, setComentario] = useState('');
   const [verCodigo, setVerCodigo] = useState(false);
   const [avisoPrep, setAvisoPrep] = useState(false);
   const [sesion, setSesion] = useState<any>(null);
@@ -204,7 +207,15 @@ export default function App() {
     if (!menu || !miembro) return;
     const socket: Socket = io('/ws', { auth: { token: miembro.token } });
     socket.on('connect', () => socket.emit('join-mesa', { mesaId: menu.mesa.id }));
-    socket.on('pedido:estado', (d: any) => setEstado(d.estado));
+    socket.on('pedido:estado', (d: any) => {
+      setEstado(d.estado);
+      if (d.estado === 'ENTREGADO') setEncuestaModal(true);
+      if ((d.estado === 'LISTO' || d.estado === 'ENTREGADO') && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('KLUBB — ¡Tu pedido está listo!', {
+          body: `Estado: ${d.estado === 'LISTO' ? 'Listo para entregar' : 'Entregado'}`,
+        });
+      }
+    });
     socket.on('mesa:actualizada', () => cargarSesion());
     socket.on('cancion:nueva', refrescarCanciones);
     socket.on('cancion:actualizada', refrescarCanciones);
@@ -358,6 +369,9 @@ export default function App() {
     setResultado({ codigo: data.codigo, pin: data.pin });
     setPedidoActivo({ id: data.id, codigo: data.codigo });
     setEstado('RECIBIDO');
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     setCart({});
     setCheckout(false);
     cargarSesion();
@@ -373,6 +387,22 @@ export default function App() {
     setPedidoActivo(null);
     setEstado('CANCELADO');
     cargarSesion();
+  }
+
+  async function enviarEncuesta() {
+    if (!pedidoActivo) return;
+    try {
+      await fetch('/api/public/encuesta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId: pedidoActivo.id, estrellas, comentario }),
+      });
+      setEncuestaModal(false);
+      setAviso('¡Gracias por tu calificación!');
+      setTimeout(() => setAviso(''), 2500);
+    } catch {
+      /* ignore */
+    }
   }
 
   async function pedirCancion() {
@@ -887,6 +917,33 @@ export default function App() {
             <button className="btn primary block" style={{ marginTop: 20 }} onClick={() => setNivelUp(null)}>
               ¡Genial!
             </button>
+          </div>
+        </div>
+      )}
+
+      {encuestaModal && (
+        <div className="modal-bg" onClick={() => setEncuestaModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <h2>¿Cómo estuvo tu experiencia?</h2>
+            <div style={{ fontSize: 32, margin: '12px 0' }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setEstrellas(n)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 30, color: n <= estrellas ? '#f5b301' : '#3a3f45' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+              placeholder="Cuéntanos más (opcional)"
+              style={{ width: '100%', minHeight: 70, marginBottom: 12 }}
+            />
+            <button className="btn primary block" onClick={enviarEncuesta}>Enviar</button>
+            <button className="btn block" style={{ marginTop: 8 }} onClick={() => setEncuestaModal(false)}>Ahora no</button>
           </div>
         </div>
       )}

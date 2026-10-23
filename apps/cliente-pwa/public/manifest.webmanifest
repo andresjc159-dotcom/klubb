@@ -1,0 +1,18 @@
+{
+  "name": "KLUBB — Menú",
+  "short_name": "KLUBB",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0f12",
+  "theme_color": "#f5b301",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23f5b301'/><text x='50' y='68' font-size='60' font-weight='bold' text-anchor='middle' fill='%231a1204'>K</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

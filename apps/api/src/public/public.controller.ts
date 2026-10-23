@@ -120,6 +120,30 @@ export class PublicController {
     };
   }
 
+  @Post('encuesta')
+  async encuesta(
+    @Body() body: { pedidoId: string; estrellas: number; comentario?: string },
+  ) {
+    if (!body.pedidoId || !body.estrellas) {
+      throw new BadRequestException('Datos requeridos');
+    }
+    const estrellas = Math.min(5, Math.max(1, Number(body.estrellas)));
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id: body.pedidoId },
+    });
+    if (!pedido) throw new NotFoundException('Pedido no encontrado');
+    return this.prisma.encuesta.upsert({
+      where: { pedidoId: body.pedidoId },
+      update: { estrellas, comentario: body.comentario },
+      create: {
+        tenantId: pedido.tenantId,
+        pedidoId: body.pedidoId,
+        estrellas,
+        comentario: body.comentario,
+      },
+    });
+  }
+
   @Post('pedido')
   @UseGuards(AuthGuard('cliente'))
   async crearPedido(
