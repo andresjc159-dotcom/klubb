@@ -5,16 +5,19 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
 import { verify } from 'jsonwebtoken';
 
 @WebSocketGateway({ cors: { origin: '*' }, namespace: '/ws' })
 export class EventsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
@@ -22,6 +25,16 @@ export class EventsGateway
   private logger = new Logger('EventsGateway');
 
   constructor(private config: ConfigService) {}
+
+  afterInit(server: Server) {
+    const redisUrl = this.config.get<string>('REDIS_URL');
+    if (redisUrl) {
+      const pubClient = new Redis(redisUrl);
+      const subClient = pubClient.duplicate();
+      server.adapter(createAdapter(pubClient, subClient));
+      this.logger.log('Redis adapter activado para Socket.IO');
+    }
+  }
 
   private verificar(token?: string): any | null {
     if (!token) return null;
