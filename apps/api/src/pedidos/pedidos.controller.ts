@@ -157,6 +157,7 @@ export class PedidosController {
       throw new BadRequestException('El pedido ya está pagado');
     }
     const metodo = body?.metodoPago || pedido.metodoPago || MetodoPago.EFECTIVO;
+    let subio: any = null;
     const updated = await this.prisma.$transaction(async (tx) => {
       const p = await tx.pedido.update({
         where: { id },
@@ -173,29 +174,33 @@ export class PedidosController {
         },
       });
 
-      await this.acreditarPuntos(tx, pedido);
+      subio = await this.acreditarPuntos(tx, pedido);
 
       return p;
     });
+    if (subio) {
+      this.events.emitToTenant(subio.tenantId, 'cliente:subio-nivel', subio);
+      this.events.emitToMesa(subio.mesaId, 'cliente:subio-nivel', subio);
+    }
     this.events.emitToTenant(updated.tenantId, 'pedido:actualizado', updated);
     return updated;
   }
 
   private async acreditarPuntos(tx: any, pedido: any) {
-    if (!pedido.miembroId) return;
+    if (!pedido.miembroId) return null;
     const miembro = await tx.miembroSesion.findUnique({
       where: { id: pedido.miembroId },
     });
-    if (!miembro?.clienteId) return;
+    if (!miembro?.clienteId) return null;
     const cliente = await tx.cliente.findUnique({
       where: { id: miembro.clienteId },
     });
-    if (!cliente) return;
+    if (!cliente) return null;
 
     const config = await tx.configPuntos.findUnique({
       where: { tenantId: pedido.tenantId },
     });
-    if (!config || !config.habilitado) return;
+    if (!config || !config.habilitado) return null;
 
     let puntos = 0;
     if (config.modo === 'PRODUCTO') {
@@ -212,7 +217,7 @@ export class PedidosController {
       puntos = Math.floor(pedido.subtotal / base) * config.puntosBase;
     }
 
-    if (puntos <= 0) return;
+    if (puntos <= 0) return null;
 
     const nuevosPuntos = cliente.puntos + puntos;
     const niveles = await tx.nivelPuntos.findMany({
@@ -231,6 +236,19 @@ export class PedidosController {
       where: { id: cliente.id },
       data: { puntos: nuevosPuntos, nivel },
     });
+
+    if (nivel !== cliente.nivel && nivel) {
+      return {
+        miembroId: miembro.id,
+        mesaId: pedido.mesaId,
+        tenantId: pedido.tenantId,
+        clienteNombre: cliente.nombre,
+        nivelAnterior: cliente.nivel,
+        nuevoNivel: nivel,
+        puntos: nuevosPuntos,
+      };
+    }
+    return null;
   }
 
   @Post('pagar-mesa')
@@ -250,6 +268,7 @@ export class PedidosController {
     const metodo = body.metodoPago || MetodoPago.EFECTIVO;
     const total = pedidos.reduce((s, p) => s + p.total, 0);
 
+    const subidos: any[] = [];
     await this.prisma.$transaction(async (tx) => {
       for (const p of pedidos) {
         await tx.pedido.update({
@@ -265,9 +284,15 @@ export class PedidosController {
             estado: 'aprobado',
           },
         });
-        await this.acreditarPuntos(tx, p);
+        const subio = await this.acreditarPuntos(tx, p);
+        if (subio) subidos.push(subio);
       }
     });
+
+    for (const subio of subidos) {
+      this.events.emitToTenant(subio.tenantId, 'cliente:subio-nivel', subio);
+      this.events.emitToMesa(subio.mesaId, 'cliente:subio-nivel', subio);
+    }
 
     if (pedidos.length > 0) {
       this.events.emitToTenant(pedidos[0].tenantId, 'pedido:actualizado', {});

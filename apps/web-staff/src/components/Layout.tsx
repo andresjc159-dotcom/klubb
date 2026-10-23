@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import {
   Armchair,
   Award,
@@ -51,6 +53,20 @@ export default function Layout() {
   const isBarra = role === 'BARRA' || role === 'BARMAN' || role === 'COCINA';
   const isMesero = role === 'MESERO';
   const isDj = role === 'DJ';
+
+  const [nivelUp, setNivelUp] = useState<any>(null);
+
+  useEffect(() => {
+    if (role !== 'ADMIN' && role !== 'MASTER') return;
+    const token = localStorage.getItem('klubb_token');
+    if (!token) return;
+    const tenantId = user?.tenantActivoId ?? user?.tenantId;
+    if (!tenantId) return;
+    const socket = io('/ws', { auth: { token } });
+    socket.on('connect', () => socket.emit('join-tenant', { tenantId }));
+    socket.on('cliente:subio-nivel', (d: any) => setNivelUp(d));
+    return () => socket.disconnect();
+  }, [role, user]);
 
   const links: Link[] = [
     { to: '/locales', label: 'Locales', Icon: Store, show: isMaster, end: true },
@@ -118,6 +134,24 @@ export default function Layout() {
       <main className="main">
         <Outlet />
       </main>
+
+      {nivelUp && (
+        <div className="modal-bg" onClick={() => setNivelUp(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 44, marginBottom: 8 }}>🏆</div>
+            <h2 style={{ color: 'var(--accent)' }}>Cliente subió de nivel</h2>
+            <div className="sub" style={{ marginTop: 8 }}>
+              <b>{nivelUp.clienteNombre}</b> alcanzó el nivel <b>{nivelUp.nuevoNivel}</b>
+            </div>
+            <div className="sub" style={{ marginTop: 6, color: '#8b95a6' }}>
+              {nivelUp.puntos} puntos acumulados
+            </div>
+            <button className="btn primary block" style={{ marginTop: 20 }} onClick={() => setNivelUp(null)}>
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,8 @@ interface Menu {
   metodosPago?: string[];
   categorias: Categoria[];
   promociones: Promocion[];
+  configPuntos?: { habilitado: boolean; modo: string; montoBase: number; puntosBase: number } | null;
+  niveles?: { id: string; nombre: string; puntosRequeridos: number }[];
 }
 interface Miembro {
   miembroId: string;
@@ -62,6 +64,22 @@ const METODO_LABEL: Record<string, string> = {
   TRANSFERENCIA: 'Transferencia',
   WOMPI: 'Wompi (online)',
 };
+
+function progresoNivel(cliente: any, niveles: any[]) {
+  const ordenados = (niveles || []).slice().sort((a, b) => a.puntosRequeridos - b.puntosRequeridos);
+  const puntos = cliente?.puntos || 0;
+  const actual = ordenados.find((n) => n.nombre === cliente?.nivel);
+  const base = actual?.puntosRequeridos || 0;
+  const siguiente = ordenados.find((n) => n.puntosRequeridos > puntos);
+  let pct = 100;
+  let faltan = 0;
+  if (siguiente) {
+    const rango = siguiente.puntosRequeridos - base;
+    pct = rango > 0 ? Math.min(100, Math.round(((puntos - base) / rango) * 100)) : 100;
+    faltan = Math.max(0, siguiente.puntosRequeridos - puntos);
+  }
+  return { nivel: cliente?.nivel || 'Sin nivel', puntos, siguiente: siguiente?.nombre, faltan, pct };
+}
 
 const ESTADO_LABEL: Record<string, string> = {
   RECIBIDO: 'Recibido',
@@ -120,6 +138,7 @@ export default function App() {
   const [canciones, setCanciones] = useState<any[]>([]);
   const [tema, setTema] = useState('');
   const [aviso, setAviso] = useState('');
+  const [nivelUp, setNivelUp] = useState<any>(null);
   const [verCodigo, setVerCodigo] = useState(false);
   const [avisoPrep, setAvisoPrep] = useState(false);
   const [sesion, setSesion] = useState<any>(null);
@@ -189,6 +208,12 @@ export default function App() {
     socket.on('mesa:actualizada', () => cargarSesion());
     socket.on('cancion:nueva', refrescarCanciones);
     socket.on('cancion:actualizada', refrescarCanciones);
+    socket.on('cliente:subio-nivel', (d: any) => {
+      if (d.miembroId === miembro.miembroId) {
+        setNivelUp(d);
+        setCliente((c: any) => (c ? { ...c, puntos: d.puntos, nivel: d.nuevoNivel } : c));
+      }
+    });
     return () => socket.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menu, miembro, cargarSesion]);
@@ -578,6 +603,30 @@ export default function App() {
                 <b>Happy Hour</b> · 2x1 en cocteles hasta las 8pm
               </div>
             </div>
+            {menu.configPuntos?.habilitado && cliente && (() => {
+              const prog = progresoNivel(cliente, menu.niveles || []);
+              return (
+                <div className="pcard" style={{ borderColor: 'var(--accent)', marginBottom: 12 }}>
+                  <div className="pinfo">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <div>
+                        <div className="subtitle">Nivel actual</div>
+                        <div className="pname" style={{ color: '#f5b301' }}>⭐ {prog.nivel}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="subtitle">{prog.puntos} puntos</div>
+                        {prog.siguiente && (
+                          <div className="subtitle">Te faltan {prog.faltan} para {prog.siguiente}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--line)', borderRadius: 99, height: 8, width: '100%', marginTop: 10, overflow: 'hidden' }}>
+                      <div style={{ background: 'var(--accent)', height: '100%', width: `${prog.pct}%`, borderRadius: 99 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="chips">
               <button className={`chip ${catId === '__promo__' ? 'on' : ''}`} onClick={() => setCatId('__promo__')}>
                 <span className="ico">🎁</span>Promociones
@@ -819,6 +868,24 @@ export default function App() {
             </div>
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => setAvisoPrep(false)}>
               Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {nivelUp && (
+        <div className="modal-bg" onClick={() => setNivelUp(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>🎉</div>
+            <h2 style={{ color: 'var(--accent)' }}>¡Subiste de nivel!</h2>
+            <div className="subtitle" style={{ fontSize: 15, marginTop: 8 }}>
+              Ahora eres <b>{nivelUp.nuevoNivel}</b>
+            </div>
+            <div className="subtitle" style={{ marginTop: 6, color: '#8b95a6' }}>
+              Tienes {nivelUp.puntos} puntos acumulados
+            </div>
+            <button className="btn primary block" style={{ marginTop: 20 }} onClick={() => setNivelUp(null)}>
+              ¡Genial!
             </button>
           </div>
         </div>

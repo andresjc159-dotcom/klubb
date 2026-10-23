@@ -81,6 +81,17 @@ export class PublicController {
       orderBy: { createdAt: 'asc' },
     });
 
+    const configPuntos = await this.prisma.configPuntos.findUnique({
+      where: { tenantId: mesa.tenantId },
+      select: { habilitado: true, modo: true, montoBase: true, puntosBase: true },
+    });
+
+    const niveles = await this.prisma.nivelPuntos.findMany({
+      where: { tenantId: mesa.tenantId },
+      select: { id: true, nombre: true, puntosRequeridos: true },
+      orderBy: { puntosRequeridos: 'asc' },
+    });
+
     return {
       abierto: true,
       tenant: {
@@ -96,6 +107,8 @@ export class PublicController {
       metodosPago: metodosDe(mesa.tenant),
       categorias,
       promociones,
+      configPuntos,
+      niveles,
     };
   }
 
