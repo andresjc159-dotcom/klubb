@@ -6,12 +6,13 @@ const prisma = new PrismaClient();
 async function main() {
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'la-noche' },
-    update: {},
+    update: { abierto: true },
     create: {
       nombre: 'La Noche Bar',
       slug: 'la-noche',
       mensajeBienvenida: '¡Bienvenido! Pide tus tragos sin filas',
       direccion: 'Medellín',
+      abierto: true,
     },
   });
 

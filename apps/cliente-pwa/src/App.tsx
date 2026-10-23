@@ -380,6 +380,17 @@ export default function App() {
   }
 
   // ---------- RENDER ----------
+  if (cerrado) {
+    return (
+      <div className="app">
+        <div className="centered">
+          <h2 style={{ marginBottom: 8 }}>{cerrado.nombre || 'Local'}</h2>
+          <div className="subtitle" style={{ color: '#8b95a6' }}>{cerrado.mensaje}</div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !menu) {
     return (
       <div className="app">
@@ -389,17 +400,6 @@ export default function App() {
           {!qr && (
             <a className="btn primary block" style={{ marginTop: 16 }} href="/?qr=la-noche-m1">Ver demo (Mesa 1)</a>
           )}
-        </div>
-      </div>
-    );
-  }
-
-  if (cerrado) {
-    return (
-      <div className="app">
-        <div className="centered">
-          <h2 style={{ marginBottom: 8 }}>{cerrado.nombre || 'Local'}</h2>
-          <div className="subtitle" style={{ color: '#8b95a6' }}>{cerrado.mensaje}</div>
         </div>
       </div>
     );
