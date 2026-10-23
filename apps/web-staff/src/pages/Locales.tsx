@@ -19,7 +19,7 @@ export default function Locales() {
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [consolidado, setConsolidado] = useState<any>(null);
-  const [form, setForm] = useState<{ id?: string; nombre: string; direccion: string; mensajeBienvenida: string } | null>(null);
+  const [form, setForm] = useState<{ id?: string; nombre: string; direccion: string; mensajeBienvenida: string; plan: string } | null>(null);
 
   const cargar = useCallback(() => {
     api<any[]>('/locales').then(setLocales).catch(console.error);
@@ -46,11 +46,11 @@ export default function Locales() {
       if (form.id) {
         await api(`/locales/${form.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ nombre: form.nombre, direccion: form.direccion, mensajeBienvenida: form.mensajeBienvenida }),
+          body: JSON.stringify({ nombre: form.nombre, direccion: form.direccion, mensajeBienvenida: form.mensajeBienvenida, plan: form.plan }),
         });
         toast('Local actualizado', 'ok');
       } else {
-        await api('/locales', { method: 'POST', body: JSON.stringify({ nombre: form.nombre, direccion: form.direccion }) });
+        await api('/locales', { method: 'POST', body: JSON.stringify({ nombre: form.nombre, direccion: form.direccion, plan: form.plan }) });
         toast('Local creado', 'ok');
       }
       setForm(null);
@@ -78,7 +78,7 @@ export default function Locales() {
           <h1>Mis locales</h1>
           <div className="sub">Gestiona todos tus bares desde aquí</div>
         </div>
-        <button className="btn primary" onClick={() => setForm({ nombre: '', direccion: '', mensajeBienvenida: '' })}>
+        <button className="btn primary" onClick={() => setForm({ nombre: '', direccion: '', mensajeBienvenida: '', plan: 'PRO' })}>
           <Plus size={16} /> Nuevo local
         </button>
       </div>
@@ -143,6 +143,9 @@ export default function Locales() {
               <span className={`pill ${l.abierto ? 'ok' : 'mute'}`} style={{ marginLeft: 'auto' }}>
                 {l.abierto ? 'Abierto' : 'Cerrado'}
               </span>
+              <span className={`pill ${l.plan === 'BASICA' ? 'mute' : 'ok'}`} style={{ marginLeft: 6 }}>
+                {l.plan === 'BASICA' ? 'Básica' : 'Pro'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#8b95a6', marginBottom: 14 }}>
@@ -156,7 +159,7 @@ export default function Locales() {
               <button className="btn primary" style={{ flex: 1 }} onClick={() => entrar(l.id)}>
                 <LogIn size={16} /> Entrar
               </button>
-              <button className="btn" onClick={() => setForm({ id: l.id, nombre: l.nombre, direccion: l.direccion || '', mensajeBienvenida: l.mensajeBienvenida || '' })}>
+              <button className="btn" onClick={() => setForm({ id: l.id, nombre: l.nombre, direccion: l.direccion || '', mensajeBienvenida: l.mensajeBienvenida || '', plan: l.plan || 'PRO' })}>
                 <Pencil size={15} />
               </button>
               <button className="btn danger" onClick={() => eliminar(l.id, l.nombre)}>
@@ -186,6 +189,11 @@ export default function Locales() {
               <input value={form.mensajeBienvenida} onChange={(e) => setForm({ ...form, mensajeBienvenida: e.target.value })} placeholder="¡Bienvenido!" />
             </>
           )}
+          <label>Plan</label>
+          <select value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}>
+            <option value="PRO">Pro (todo incluido)</option>
+            <option value="BASICA">Básica (sin puntos, promociones ni reportes)</option>
+          </select>
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardar}>
             Guardar
           </button>

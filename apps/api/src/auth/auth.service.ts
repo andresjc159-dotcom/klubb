@@ -67,7 +67,16 @@ export class AuthService {
     return this.sign(user);
   }
 
-  private sign(user: User) {
+  private async sign(user: User) {
+    const tenantId = user.tenantActivoId ?? user.tenantId;
+    let plan = 'PRO';
+    if (tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { plan: true },
+      });
+      plan = tenant?.plan ?? 'PRO';
+    }
     const payload = {
       sub: user.id,
       email: user.email,
@@ -75,6 +84,7 @@ export class AuthService {
       tenantId: user.tenantId,
       tenantActivoId: user.tenantActivoId,
       nombre: user.nombre,
+      plan,
     };
     return {
       access_token: this.jwt.sign(payload),
@@ -85,6 +95,7 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
         tenantActivoId: user.tenantActivoId,
+        plan,
       },
     };
   }

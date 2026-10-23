@@ -14,6 +14,7 @@ export interface AuthUser {
   tenantId?: string;
   tenantActivoId?: string;
   nombre: string;
+  plan?: string;
 }
 
 interface AuthContextValue {

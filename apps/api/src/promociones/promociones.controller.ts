@@ -15,7 +15,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { tenantEfectivo } from '../common/tenant.util';
+import { tenantEfectivo, exigirPlanPro } from '../common/tenant.util';
 
 @Controller('promociones')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -26,6 +26,7 @@ export class PromocionesController {
   @Get()
   async list(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);
+    if (tenantId) await exigirPlanPro(this.prisma, tenantId);
     return this.prisma.promocion.findMany({
       where: tenantId ? { tenantId } : undefined,
       include: { productos: true },
@@ -49,6 +50,7 @@ export class PromocionesController {
   ) {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
+    await exigirPlanPro(this.prisma, tenantId);
     if (!body.nombre) throw new BadRequestException('El nombre es requerido');
     return this.prisma.promocion.create({
       data: {
@@ -70,6 +72,7 @@ export class PromocionesController {
 
   @Patch(':id')
   async editar(
+    @Req() req: any,
     @Param('id') id: string,
     @Body()
     body: {
@@ -82,6 +85,8 @@ export class PromocionesController {
       productoIds?: string[];
     },
   ) {
+    const tenantId = tenantEfectivo(req.user);
+    if (tenantId) await exigirPlanPro(this.prisma, tenantId);
     return this.prisma.promocion.update({
       where: { id },
       data: {
@@ -100,7 +105,9 @@ export class PromocionesController {
   }
 
   @Delete(':id')
-  async eliminar(@Param('id') id: string) {
+  async eliminar(@Req() req: any, @Param('id') id: string) {
+    const tenantId = tenantEfectivo(req.user);
+    if (tenantId) await exigirPlanPro(this.prisma, tenantId);
     return this.prisma.promocion.delete({ where: { id } });
   }
 }

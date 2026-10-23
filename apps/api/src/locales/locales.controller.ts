@@ -63,7 +63,7 @@ export class LocalesController {
   }
 
   @Post()
-  async crear(@Body() body: { nombre: string; direccion?: string }) {
+  async crear(@Body() body: { nombre: string; direccion?: string; plan?: string }) {
     if (!body.nombre?.trim()) {
       throw new BadRequestException('El nombre es requerido');
     }
@@ -79,6 +79,7 @@ export class LocalesController {
         slug,
         direccion: body.direccion,
         mensajeBienvenida: '¡Bienvenido! Pide tus tragos sin filas',
+        plan: body.plan === 'BASICA' ? 'BASICA' : 'PRO',
       },
     });
   }
@@ -86,7 +87,13 @@ export class LocalesController {
   @Patch(':id')
   async editar(
     @Param('id') id: string,
-    @Body() body: { nombre?: string; direccion?: string; mensajeBienvenida?: string },
+    @Body()
+    body: {
+      nombre?: string;
+      direccion?: string;
+      mensajeBienvenida?: string;
+      plan?: string;
+    },
   ) {
     return this.prisma.tenant.update({
       where: { id },
@@ -94,6 +101,7 @@ export class LocalesController {
         nombre: body.nombre,
         direccion: body.direccion,
         mensajeBienvenida: body.mensajeBienvenida,
+        plan: body.plan,
       },
     });
   }

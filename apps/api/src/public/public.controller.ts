@@ -70,27 +70,35 @@ export class PublicController {
       include: { miembros: { select: { id: true, alias: true } } },
     });
 
-    const promociones = await this.prisma.promocion.findMany({
-      where: { tenantId: mesa.tenantId, activa: true },
-      include: {
-        productos: {
-          where: { activo: true, stock: { gt: 0 } },
-          orderBy: { nombre: 'asc' },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const esPro = mesa.tenant.plan !== 'BASICA';
 
-    const configPuntos = await this.prisma.configPuntos.findUnique({
-      where: { tenantId: mesa.tenantId },
-      select: { habilitado: true, modo: true, montoBase: true, puntosBase: true },
-    });
+    const promociones = esPro
+      ? await this.prisma.promocion.findMany({
+          where: { tenantId: mesa.tenantId, activa: true },
+          include: {
+            productos: {
+              where: { activo: true, stock: { gt: 0 } },
+              orderBy: { nombre: 'asc' },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
 
-    const niveles = await this.prisma.nivelPuntos.findMany({
-      where: { tenantId: mesa.tenantId },
-      select: { id: true, nombre: true, puntosRequeridos: true },
-      orderBy: { puntosRequeridos: 'asc' },
-    });
+    const configPuntos = esPro
+      ? await this.prisma.configPuntos.findUnique({
+          where: { tenantId: mesa.tenantId },
+          select: { habilitado: true, modo: true, montoBase: true, puntosBase: true },
+        })
+      : null;
+
+    const niveles = esPro
+      ? await this.prisma.nivelPuntos.findMany({
+          where: { tenantId: mesa.tenantId },
+          select: { id: true, nombre: true, puntosRequeridos: true },
+          orderBy: { puntosRequeridos: 'asc' },
+        })
+      : [];
 
     return {
       abierto: true,

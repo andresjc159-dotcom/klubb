@@ -85,6 +85,7 @@ model Tenant {
   metodosPago       Json?
   activo            Boolean   @default(true)
   abierto           Boolean   @default(false)
+  plan              String    @default("PRO")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   zonas             Zona[]

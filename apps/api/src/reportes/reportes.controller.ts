@@ -11,7 +11,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { tenantEfectivo } from '../common/tenant.util';
+import { tenantEfectivo, exigirPlanPro } from '../common/tenant.util';
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -29,6 +29,7 @@ export class ReportesController {
   ) {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
+    await exigirPlanPro(this.prisma, tenantId);
 
     const fin = hasta ? new Date(`${hasta}T23:59:59.999Z`) : new Date();
     const inicio = desde

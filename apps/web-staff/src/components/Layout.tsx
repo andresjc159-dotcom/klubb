@@ -50,6 +50,7 @@ export default function Layout() {
   const esAdminPuro = role === 'ADMIN';
   const masterEnLocal = isMaster && !!user?.tenantActivoId;
   const operaLocal = esAdminPuro || masterEnLocal;
+  const esPro = user?.plan !== 'BASICA';
   const isCajero = role === 'CAJERO';
   const isBarra = role === 'BARRA' || role === 'BARMAN' || role === 'COCINA';
   const isMesero = role === 'MESERO';
@@ -76,9 +77,9 @@ export default function Layout() {
     { to: '/productos', label: 'Inventario', Icon: Package, show: operaLocal },
     { to: '/insumos', label: 'Insumos', Icon: Boxes, show: operaLocal },
     { to: '/recetas', label: 'Recetas', Icon: ChefHat, show: operaLocal },
-    { to: '/puntos', label: 'Puntos', Icon: Award, show: operaLocal },
-    { to: '/promociones', label: 'Promociones', Icon: Tag, show: operaLocal },
-    { to: '/reportes', label: 'Reportes', Icon: BarChart3, show: operaLocal },
+    { to: '/puntos', label: 'Puntos', Icon: Award, show: operaLocal && esPro },
+    { to: '/promociones', label: 'Promociones', Icon: Tag, show: operaLocal && esPro },
+    { to: '/reportes', label: 'Reportes', Icon: BarChart3, show: operaLocal && esPro },
     { to: '/kds', label: 'Pedidos (KDS)', Icon: Martini, show: operaLocal || isBarra },
     { to: '/caja', label: 'Caja', Icon: Wallet, show: operaLocal || isCajero },
     { to: '/usuarios', label: 'Usuarios', Icon: Users, show: operaLocal },

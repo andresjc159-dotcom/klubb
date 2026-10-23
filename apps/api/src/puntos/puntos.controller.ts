@@ -15,7 +15,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { tenantEfectivo } from '../common/tenant.util';
+import { tenantEfectivo, exigirPlanPro } from '../common/tenant.util';
 
 @Controller('puntos')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -26,6 +26,7 @@ export class PuntosController {
   private async miTenant(req: any): Promise<string> {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
+    await exigirPlanPro(this.prisma, tenantId);
     return tenantId;
   }
 
