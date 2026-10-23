@@ -26,10 +26,9 @@ export class UsuariosController {
 
   @Get()
   async list(@Req() req: any) {
-    const esMaster = req.user.role === Role.MASTER;
     const tenantId = tenantEfectivo(req.user);
     const usuarios = await this.prisma.user.findMany({
-      where: esMaster ? {} : { tenantId },
+      where: tenantId ? { tenantId } : {},
       select: {
         id: true,
         nombre: true,
