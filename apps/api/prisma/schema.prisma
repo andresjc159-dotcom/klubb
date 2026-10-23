@@ -62,11 +62,9 @@ enum EstadoCancion {
   YA_PUESTA
 }
 
-enum NivelCliente {
-  BRONCE
-  PLATA
-  ORO
-  BLACK
+enum ModoPuntos {
+  PRODUCTO
+  CONSUMO
 }
 
 enum TipoMovimiento {
@@ -99,6 +97,8 @@ model Tenant {
   canciones         Cancion[]
   facturas          Factura[]
   promociones       Promocion[]
+  configPuntos      ConfigPuntos?
+  nivelesPuntos     NivelPuntos[]
   reservas          Reserva[]
   cajas             Caja[]
   proveedores       Proveedor[]
@@ -136,7 +136,7 @@ model Cliente {
   telefono     String?
   passwordHash String?
   puntos       Int          @default(0)
-  nivel        NivelCliente @default(BRONCE)
+  nivel        String       @default("")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   pedidos      Pedido[]
@@ -202,6 +202,7 @@ model Producto {
   costo       Int                    @default(0)
   stock       Int                    @default(0)
   stockMinimo Int                    @default(0)
+  puntos      Int                    @default(0)
   emoji       String?
   imagenUrl   String?
   estacion    String                 @default("BARRA")
@@ -213,6 +214,7 @@ model Producto {
   movimientos MovimientoInventario[]
   ordenItems  OrdenCompraItem[]
   receta      RecetaInsumo[]
+  promociones Promocion[]
 
   @@unique([tenantId, nombre])
 }
@@ -404,15 +406,43 @@ model Factura {
 }
 
 model Promocion {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
   nombre      String
   descripcion String?
-  activa      Boolean   @default(false)
+  descuento   Int         @default(0)
+  activa      Boolean     @default(false)
   horaInicio  DateTime?
   horaFin     DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  productos   Producto[]
+}
+
+model ConfigPuntos {
+  id         String       @id @default(cuid())
+  tenantId   String       @unique
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  habilitado Boolean      @default(false)
+  modo       ModoPuntos   @default(CONSUMO)
+  montoBase  Int          @default(1000)
+  puntosBase Int          @default(1)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  niveles    NivelPuntos[]
+}
+
+model NivelPuntos {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  nombre           String
+  puntosRequeridos Int      @default(0)
+  orden            Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@unique([tenantId, nombre])
 }
 
 model Reserva {

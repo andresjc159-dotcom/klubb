@@ -24,6 +24,7 @@ interface ProductoForm {
   stockMinimo: string;
   emoji: string;
   estacion: string;
+  puntos: string;
 }
 
 export default function Productos() {
@@ -67,6 +68,7 @@ export default function Productos() {
       stockMinimo: Number(prodModal.stockMinimo || 5),
       emoji: prodModal.emoji || '🍸',
       estacion: prodModal.estacion,
+      puntos: Number(prodModal.puntos || 0),
     };
     try {
       if (prodModal.id) {
@@ -106,6 +108,7 @@ export default function Productos() {
       stockMinimo: String(p.stockMinimo ?? 5),
       emoji: p.emoji || '',
       estacion: p.estacion || 'BARRA',
+      puntos: String(p.puntos ?? 0),
     });
   }
 
@@ -139,7 +142,7 @@ export default function Productos() {
           <button
             className="btn primary"
             onClick={() =>
-              setProdModal({ categoriaId: categorias[0]?.id || '', nombre: '', descripcion: '', precio: '', costo: '', stock: '', stockMinimo: '5', emoji: '', estacion: 'BARRA' })
+              setProdModal({ categoriaId: categorias[0]?.id || '', nombre: '', descripcion: '', precio: '', costo: '', stock: '', stockMinimo: '5', emoji: '', estacion: 'BARRA', puntos: '0' })
             }
           >
             <Plus size={16} /> Producto
@@ -250,6 +253,8 @@ export default function Productos() {
           </div>
           <label>Emoji</label>
           <input value={prodModal.emoji} onChange={(e) => setProdModal({ ...prodModal, emoji: e.target.value })} placeholder="🍹" />
+          <label>Puntos que otorga (si el modo de puntos es "por producto")</label>
+          <input type="number" value={prodModal.puntos} onChange={(e) => setProdModal({ ...prodModal, puntos: e.target.value })} placeholder="0" />
           <label>Estación que lo prepara</label>
           <select value={prodModal.estacion} onChange={(e) => setProdModal({ ...prodModal, estacion: e.target.value })}>
             <option value="BARRA">Barra (bebidas directas)</option>

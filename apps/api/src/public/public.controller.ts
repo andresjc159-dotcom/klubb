@@ -70,6 +70,17 @@ export class PublicController {
       include: { miembros: { select: { id: true, alias: true } } },
     });
 
+    const promociones = await this.prisma.promocion.findMany({
+      where: { tenantId: mesa.tenantId, activa: true },
+      include: {
+        productos: {
+          where: { activo: true, stock: { gt: 0 } },
+          orderBy: { nombre: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
     return {
       abierto: true,
       tenant: {
@@ -84,6 +95,7 @@ export class PublicController {
         : null,
       metodosPago: metodosDe(mesa.tenant),
       categorias,
+      promociones,
     };
   }
 

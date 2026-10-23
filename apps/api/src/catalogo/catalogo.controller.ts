@@ -200,6 +200,7 @@ export class CatalogoController {
       stockMinimo?: number;
       emoji?: string;
       estacion?: string;
+      puntos?: number;
     },
   ) {
     if (!body.categoriaId || !body.nombre || body.precio == null) {
@@ -217,6 +218,7 @@ export class CatalogoController {
         stockMinimo: Number(body.stockMinimo ?? 5),
         emoji: body.emoji,
         estacion: body.estacion ?? 'BARRA',
+        puntos: Number(body.puntos ?? 0),
       },
       include: { categoria: true },
     });
@@ -237,6 +239,7 @@ export class CatalogoController {
       emoji?: string;
       estacion?: string;
       activo?: boolean;
+      puntos?: number;
     },
   ) {
     return this.prisma.producto.update({
@@ -252,6 +255,7 @@ export class CatalogoController {
         emoji: body.emoji,
         estacion: body.estacion,
         activo: body.activo,
+        puntos: body.puntos != null ? Number(body.puntos) : undefined,
       },
       include: { categoria: true },
     });

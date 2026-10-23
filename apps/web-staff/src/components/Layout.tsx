@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Armchair,
+  Award,
   Boxes,
   ChefHat,
   ClipboardList,
@@ -11,6 +12,7 @@ import {
   Package,
   Settings,
   Store,
+  Tag,
   Users,
   Wallet,
   type LucideIcon,
@@ -57,6 +59,8 @@ export default function Layout() {
     { to: '/productos', label: 'Inventario', Icon: Package, show: operaLocal },
     { to: '/insumos', label: 'Insumos', Icon: Boxes, show: operaLocal },
     { to: '/recetas', label: 'Recetas', Icon: ChefHat, show: operaLocal },
+    { to: '/puntos', label: 'Puntos', Icon: Award, show: operaLocal },
+    { to: '/promociones', label: 'Promociones', Icon: Tag, show: operaLocal },
     { to: '/kds', label: 'Pedidos (KDS)', Icon: Martini, show: operaLocal || isBarra },
     { to: '/caja', label: 'Caja', Icon: Wallet, show: operaLocal || isCajero },
     { to: '/usuarios', label: 'Usuarios', Icon: Users, show: operaLocal },

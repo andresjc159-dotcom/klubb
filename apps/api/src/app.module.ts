@@ -13,6 +13,8 @@ import { CancionesModule } from './canciones/canciones.module';
 import { LocalesModule } from './locales/locales.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { InsumosModule } from './insumos/insumos.module';
+import { PuntosModule } from './puntos/puntos.module';
+import { PromocionesModule } from './promociones/promociones.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -31,6 +33,8 @@ import { AppController } from './app.controller';
     LocalesModule,
     UsuariosModule,
     InsumosModule,
+    PuntosModule,
+    PromocionesModule,
   ],
   controllers: [AppController],
 })

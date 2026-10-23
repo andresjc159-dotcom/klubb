@@ -26,6 +26,13 @@ interface Categoria {
   icono: string;
   productos: Producto[];
 }
+interface Promocion {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  descuento: number;
+  productos: Producto[];
+}
 interface Menu {
   abierto?: boolean;
   mensaje?: string;
@@ -34,6 +41,7 @@ interface Menu {
   sesion: null | { id: string; activo: boolean; miembros: { id: string; alias: string }[] };
   metodosPago?: string[];
   categorias: Categoria[];
+  promociones: Promocion[];
 }
 interface Miembro {
   miembroId: string;
@@ -571,35 +579,76 @@ export default function App() {
               </div>
             </div>
             <div className="chips">
+              <button className={`chip ${catId === '__promo__' ? 'on' : ''}`} onClick={() => setCatId('__promo__')}>
+                <span className="ico">🎁</span>Promociones
+              </button>
               {menu.categorias.map((c) => (
                 <button key={c.id} className={`chip ${c.id === cat?.id ? 'on' : ''}`} onClick={() => setCatId(c.id)}>
                   <span className="ico">{c.icono || '🍽️'}</span>{c.nombre}
                 </button>
               ))}
             </div>
-            <div className="carta">
-              {cat?.productos.map((p) => (
-                <div className="carta-card" key={p.id}>
-                  <div className="pimg">{p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : p.emoji || '🍸'}</div>
-                  <div className="cbody">
-                    <div className="cname">{p.nombre}</div>
-                    <div className="cdesc">{p.descripcion || cat.nombre}</div>
-                  </div>
-                  <div className="cfoot">
-                    <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
-                    {cantidad(p.id) > 0 ? (
-                      <div className="qty">
-                        <button onClick={() => toggle(p.id, -1)}>−</button>
-                        <span>{cantidad(p.id)}</span>
-                        <button onClick={() => toggle(p.id, 1)}>+</button>
+            {catId === '__promo__' ? (
+              <div className="carta">
+                {(menu.promociones || []).length === 0 && (
+                  <div className="cdesc">No hay promociones activas.</div>
+                )}
+                {(menu.promociones || []).map((promo) => (
+                  <div key={promo.id} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <b style={{ fontSize: 15 }}>🎁 {promo.nombre}</b>
+                      {promo.descuento > 0 && <span className="pill ok">-{promo.descuento}%</span>}
+                    </div>
+                    {promo.descripcion && <div className="cdesc" style={{ marginBottom: 8 }}>{promo.descripcion}</div>}
+                    {promo.productos.map((p) => (
+                      <div className="carta-card" key={p.id}>
+                        <div className="pimg">{p.emoji || '🍸'}</div>
+                        <div className="cbody">
+                          <div className="cname">{p.nombre}</div>
+                          <div className="cdesc">{p.descripcion || promo.nombre}</div>
+                        </div>
+                        <div className="cfoot">
+                          <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
+                          {cantidad(p.id) > 0 ? (
+                            <div className="qty">
+                              <button onClick={() => toggle(p.id, -1)}>−</button>
+                              <span>{cantidad(p.id)}</span>
+                              <button onClick={() => toggle(p.id, 1)}>+</button>
+                            </div>
+                          ) : (
+                            <button className="add-btn" onClick={() => toggle(p.id, 1)}>+</button>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <button className="add-btn" onClick={() => toggle(p.id, 1)}>+</button>
-                    )}
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="carta">
+                {cat?.productos.map((p) => (
+                  <div className="carta-card" key={p.id}>
+                    <div className="pimg">{p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : p.emoji || '🍸'}</div>
+                    <div className="cbody">
+                      <div className="cname">{p.nombre}</div>
+                      <div className="cdesc">{p.descripcion || cat.nombre}</div>
+                    </div>
+                    <div className="cfoot">
+                      <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
+                      {cantidad(p.id) > 0 ? (
+                        <div className="qty">
+                          <button onClick={() => toggle(p.id, -1)}>−</button>
+                          <span>{cantidad(p.id)}</span>
+                          <button onClick={() => toggle(p.id, 1)}>+</button>
+                        </div>
+                      ) : (
+                        <button className="add-btn" onClick={() => toggle(p.id, 1)}>+</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 

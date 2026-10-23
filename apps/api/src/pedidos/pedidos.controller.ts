@@ -191,23 +191,42 @@ export class PedidosController {
       where: { id: miembro.clienteId },
     });
     if (!cliente) return;
-    const multiplicador: Record<string, number> = {
-      BRONCE: 1,
-      PLATA: 1.25,
-      ORO: 1.5,
-      BLACK: 2,
-    };
-    const mult = multiplicador[cliente.nivel] || 1;
-    const pts = Math.floor(pedido.total / 1000) * mult;
-    const nuevosPuntos = cliente.puntos + pts;
-    const nivel =
-      nuevosPuntos >= 3000
-        ? 'BLACK'
-        : nuevosPuntos >= 1500
-          ? 'ORO'
-          : nuevosPuntos >= 500
-            ? 'PLATA'
-            : 'BRONCE';
+
+    const config = await tx.configPuntos.findUnique({
+      where: { tenantId: pedido.tenantId },
+    });
+    if (!config || !config.habilitado) return;
+
+    let puntos = 0;
+    if (config.modo === 'PRODUCTO') {
+      const detalles = await tx.detallePedido.findMany({
+        where: { pedidoId: pedido.id },
+        include: { producto: true },
+      });
+      puntos = detalles.reduce(
+        (s: number, d: any) => s + (d.producto?.puntos ?? 0) * d.cantidad,
+        0,
+      );
+    } else {
+      const base = config.montoBase || 1;
+      puntos = Math.floor(pedido.subtotal / base) * config.puntosBase;
+    }
+
+    if (puntos <= 0) return;
+
+    const nuevosPuntos = cliente.puntos + puntos;
+    const niveles = await tx.nivelPuntos.findMany({
+      where: { tenantId: pedido.tenantId },
+      orderBy: { puntosRequeridos: 'desc' },
+    });
+    let nivel = cliente.nivel;
+    for (const n of niveles) {
+      if (nuevosPuntos >= n.puntosRequeridos) {
+        nivel = n.nombre;
+        break;
+      }
+    }
+
     await tx.cliente.update({
       where: { id: cliente.id },
       data: { puntos: nuevosPuntos, nivel },
