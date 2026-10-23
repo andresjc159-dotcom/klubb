@@ -1,21 +1,19 @@
-# ---------- Build web-staff ----------
-FROM node:20-slim AS staff-build
+# ---------- Build frontends ----------
+FROM node:20-slim AS build
 WORKDIR /app
-COPY apps/web-staff/package.json ./
-RUN npm install
-COPY apps/web-staff/ .
-RUN npm run build
 
-# ---------- Build cliente-pwa ----------
-FROM node:20-slim AS client-build
-WORKDIR /app
-COPY apps/cliente-pwa/package.json ./
-RUN npm install
-COPY apps/cliente-pwa/ .
-RUN npm run build
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web-staff/package.json apps/web-staff/
+COPY apps/cliente-pwa/package.json apps/cliente-pwa/
+RUN npm ci --workspace=web-staff --workspace=cliente-pwa
+
+COPY . .
+RUN npm run build -w web-staff
+RUN npm run build -w cliente-pwa
 
 # ---------- Serve with nginx ----------
 FROM nginx:alpine
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=client-build /app/dist /usr/share/nginx/html/
-COPY --from=staff-build /app/dist /usr/share/nginx/html/staff/
+COPY --from=build /app/apps/cliente-pwa/dist /usr/share/nginx/html/
+COPY --from=build /app/apps/web-staff/dist /usr/share/nginx/html/staff/
