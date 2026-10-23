@@ -5,7 +5,6 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -15,9 +14,20 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { Redis } from 'ioredis';
 import { verify } from 'jsonwebtoken';
 
-@WebSocketGateway({ cors: { origin: '*' }, namespace: '/ws' })
+let redisAdapter: any = null;
+if (process.env.REDIS_URL) {
+  const pubClient = new Redis(process.env.REDIS_URL);
+  const subClient = pubClient.duplicate();
+  redisAdapter = createAdapter(pubClient, subClient);
+}
+
+@WebSocketGateway({
+  cors: { origin: '*' },
+  namespace: '/ws',
+  ...(redisAdapter ? { adapter: redisAdapter } : {}),
+})
 export class EventsGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
@@ -25,16 +35,6 @@ export class EventsGateway
   private logger = new Logger('EventsGateway');
 
   constructor(private config: ConfigService) {}
-
-  afterInit() {
-    const redisUrl = this.config.get<string>('REDIS_URL');
-    if (redisUrl && this.server) {
-      const pubClient = new Redis(redisUrl);
-      const subClient = pubClient.duplicate();
-      this.server.adapter(createAdapter(pubClient, subClient));
-      this.logger.log('Redis adapter activado para Socket.IO');
-    }
-  }
 
   private verificar(token?: string): any | null {
     if (!token) return null;
