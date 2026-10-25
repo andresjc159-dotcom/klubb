@@ -139,6 +139,7 @@ export default function App() {
   const [tema, setTema] = useState('');
   const [aviso, setAviso] = useState('');
   const [nivelUp, setNivelUp] = useState<any>(null);
+  const [productoModal, setProductoModal] = useState<any>(null);
   const [encuestaModal, setEncuestaModal] = useState(false);
   const [estrellas, setEstrellas] = useState(5);
   const [comentario, setComentario] = useState('');
@@ -680,7 +681,7 @@ export default function App() {
                     </div>
                     {promo.descripcion && <div className="cdesc" style={{ marginBottom: 8 }}>{promo.descripcion}</div>}
                     {promo.productos.map((p) => (
-                      <div className="carta-card" key={p.id}>
+                      <div className="carta-card" key={p.id} onClick={() => setProductoModal(p)}>
                         <div className="pimg">{p.emoji || '🍸'}</div>
                         <div className="cbody">
                           <div className="cname">{p.nombre}</div>
@@ -690,12 +691,12 @@ export default function App() {
                           <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
                           {cantidad(p.id) > 0 ? (
                             <div className="qty">
-                              <button onClick={() => toggle(p.id, -1)}>−</button>
+                              <button onClick={(e) => { e.stopPropagation(); toggle(p.id, -1); }}>−</button>
                               <span>{cantidad(p.id)}</span>
-                              <button onClick={() => toggle(p.id, 1)}>+</button>
+                              <button onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
                             </div>
                           ) : (
-                            <button className="add-btn" onClick={() => toggle(p.id, 1)}>+</button>
+                            <button className="add-btn" onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
                           )}
                         </div>
                       </div>
@@ -706,7 +707,7 @@ export default function App() {
             ) : (
               <div className="carta">
                 {cat?.productos.map((p) => (
-                  <div className="carta-card" key={p.id}>
+                  <div className="carta-card" key={p.id} onClick={() => setProductoModal(p)}>
                     <div className="pimg">{p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : p.emoji || '🍸'}</div>
                     <div className="cbody">
                       <div className="cname">{p.nombre}</div>
@@ -716,12 +717,12 @@ export default function App() {
                       <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
                       {cantidad(p.id) > 0 ? (
                         <div className="qty">
-                          <button onClick={() => toggle(p.id, -1)}>−</button>
+                          <button onClick={(e) => { e.stopPropagation(); toggle(p.id, -1); }}>−</button>
                           <span>{cantidad(p.id)}</span>
-                          <button onClick={() => toggle(p.id, 1)}>+</button>
+                          <button onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
                         </div>
                       ) : (
-                        <button className="add-btn" onClick={() => toggle(p.id, 1)}>+</button>
+                        <button className="add-btn" onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
                       )}
                     </div>
                   </div>
@@ -944,6 +945,37 @@ export default function App() {
             />
             <button className="btn primary block" onClick={enviarEncuesta}>Enviar</button>
             <button className="btn block" style={{ marginTop: 8 }} onClick={() => setEncuestaModal(false)}>Ahora no</button>
+          </div>
+        </div>
+      )}
+
+      {productoModal && (
+        <div className="modal-bg" onClick={() => setProductoModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            {productoModal.imagenUrl ? (
+              <img src={productoModal.imagenUrl} alt={productoModal.nombre} style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 16 }} />
+            ) : (
+              <div style={{ fontSize: 90 }}>{productoModal.emoji || '🍸'}</div>
+            )}
+            <h2 style={{ marginTop: 12 }}>{productoModal.nombre}</h2>
+            {productoModal.descripcion && (
+              <div className="subtitle" style={{ marginTop: 8 }}>{productoModal.descripcion}</div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18 }}>
+              <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: 22 }}>
+                ${productoModal.precio.toLocaleString('es-CO')}
+              </span>
+              {cantidad(productoModal.id) > 0 ? (
+                <div className="qty">
+                  <button onClick={() => toggle(productoModal.id, -1)}>−</button>
+                  <span>{cantidad(productoModal.id)}</span>
+                  <button onClick={() => toggle(productoModal.id, 1)}>+</button>
+                </div>
+              ) : (
+                <button className="btn primary" onClick={() => toggle(productoModal.id, 1)}>Agregar</button>
+              )}
+            </div>
+            <button className="btn block" style={{ marginTop: 14 }} onClick={() => setProductoModal(null)}>Cerrar</button>
           </div>
         </div>
       )}
