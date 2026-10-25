@@ -30,7 +30,7 @@ export class PedidosController {
     return this.prisma.pedido.findMany({
       where: {
         ...(tenantId ? { tenantId } : {}),
-        estado: { notIn: [EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO] },
+        estado: { not: EstadoPedido.CANCELADO },
       },
       include: {
         mesa: { include: { zona: true } },
