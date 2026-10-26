@@ -386,6 +386,7 @@ export default function Caja() {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Base total</span><b>{fmt(cierreModal.baseTotal)}</b></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Recaudado</span><b>{fmt(cierreModal.totalRecaudado)}</b></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Propinas</span><b>{fmt(cierreModal.propinas)}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Unidades vendidas</span><b>{cierreModal.unidadesVendidas ?? 0}</b></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}><span>Cierre total</span><b>{fmt(cierreModal.cierre ?? 0)}</b></div>
             </div>
             {cierreModal.porMetodo && Object.keys(cierreModal.porMetodo).length > 0 && (

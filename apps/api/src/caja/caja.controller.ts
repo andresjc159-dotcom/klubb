@@ -78,6 +78,11 @@ export class CajaController {
       total: v.total,
     }));
 
+    const unidadesVendidas = Object.values(vendidosMap).reduce(
+      (s, v) => s + v.cantidad,
+      0,
+    );
+
     const inventarioFinal = await this.prisma.producto.findMany({
       where: { tenantId: caja.tenantId },
       select: { nombre: true, stock: true },
@@ -112,6 +117,7 @@ export class CajaController {
       porMesero,
       propinas,
       productosVendidos,
+      unidadesVendidas,
       inventarioInicio: caja.inventarioInicio ?? [],
       inventarioFinal,
       pedidosCancelados,

@@ -30,12 +30,14 @@ interface ProductoForm {
 export default function Productos() {
   const toast = useToast();
   const [categorias, setCategorias] = useState<any[]>([]);
+  const [vendidosPorDia, setVendidosPorDia] = useState<any[]>([]);
 
   const [catModal, setCatModal] = useState<{ nombre: string; icono: string } | null>(null);
   const [prodModal, setProdModal] = useState<ProductoForm | null>(null);
 
   const cargar = useCallback(() => {
     api<any[]>('/categorias').then(setCategorias).catch(console.error);
+    api<any[]>('/productos/vendidos-por-dia').then(setVendidosPorDia).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -148,6 +150,18 @@ export default function Productos() {
             <Plus size={16} /> Producto
           </button>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Unidades vendidas por día</h3>
+        <div className="sub" style={{ marginBottom: 8 }}>Últimos 14 días</div>
+        {vendidosPorDia.length === 0 && <div className="sub">Aún no hay ventas registradas.</div>}
+        {vendidosPorDia.map((d) => (
+          <div key={d.fecha} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
+            <span>{d.fecha}</span>
+            <b>{d.unidades} und</b>
+          </div>
+        ))}
       </div>
 
       <div className="grid">

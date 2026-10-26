@@ -55,6 +55,29 @@ export class CatalogoController {
     });
   }
 
+  @Get('productos/vendidos-por-dia')
+  async vendidosPorDia(@Req() req: any) {
+    const tenantId = tenantEfectivo(req.user);
+    const desde = new Date();
+    desde.setDate(desde.getDate() - 14);
+    const movimientos = await this.prisma.movimientoInventario.findMany({
+      where: {
+        tenantId,
+        tipo: 'VENTA',
+        createdAt: { gte: desde },
+      },
+      select: { cantidad: true, createdAt: true },
+    });
+    const porDia: Record<string, number> = {};
+    for (const m of movimientos) {
+      const fecha = m.createdAt.toISOString().slice(0, 10);
+      porDia[fecha] = (porDia[fecha] || 0) + Math.abs(m.cantidad);
+    }
+    return Object.entries(porDia)
+      .map(([fecha, unidades]) => ({ fecha, unidades }))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  }
+
   @Get('zonas')
   zonas(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);
