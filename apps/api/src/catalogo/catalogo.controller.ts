@@ -208,6 +208,28 @@ export class CatalogoController {
     });
   }
 
+  @Patch('categorias/:id')
+  editarCategoria(
+    @Param('id') id: string,
+    @Body() body: { nombre?: string; icono?: string },
+  ) {
+    return this.prisma.categoria.update({
+      where: { id },
+      data: { nombre: body.nombre, icono: body.icono },
+    });
+  }
+
+  @Delete('categorias/:id')
+  async eliminarCategoria(@Param('id') id: string) {
+    const productos = await this.prisma.producto.count({
+      where: { categoriaId: id },
+    });
+    if (productos > 0) {
+      throw new BadRequestException('No puedes eliminar una categoría que tiene productos');
+    }
+    return this.prisma.categoria.delete({ where: { id } });
+  }
+
   // ---------- Productos ----------
   @Post('productos')
   crearProducto(

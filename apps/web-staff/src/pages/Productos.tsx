@@ -32,7 +32,7 @@ export default function Productos() {
   const [categorias, setCategorias] = useState<any[]>([]);
   const [vendidosPorDia, setVendidosPorDia] = useState<any[]>([]);
 
-  const [catModal, setCatModal] = useState<{ nombre: string; icono: string } | null>(null);
+  const [catModal, setCatModal] = useState<{ id?: string; nombre: string; icono: string } | null>(null);
   const [prodModal, setProdModal] = useState<ProductoForm | null>(null);
 
   const cargar = useCallback(() => {
@@ -49,9 +49,25 @@ export default function Productos() {
   async function guardarCategoria() {
     if (!catModal?.nombre.trim()) return;
     try {
-      await api('/categorias', { method: 'POST', body: JSON.stringify({ nombre: catModal.nombre, icono: catModal.icono || '🍽️' }) });
-      toast('Categoría creada', 'ok');
+      if (catModal.id) {
+        await api(`/categorias/${catModal.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: catModal.nombre, icono: catModal.icono || '🍽️' }) });
+        toast('Categoría actualizada', 'ok');
+      } else {
+        await api('/categorias', { method: 'POST', body: JSON.stringify({ nombre: catModal.nombre, icono: catModal.icono || '🍽️' }) });
+        toast('Categoría creada', 'ok');
+      }
       setCatModal(null);
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
+  async function eliminarCategoria(id: string, nombre: string) {
+    if (!window.confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
+    try {
+      await api(`/categorias/${id}`, { method: 'DELETE' });
+      toast('Categoría eliminada', 'ok');
       cargar();
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
@@ -169,7 +185,13 @@ export default function Productos() {
           <div className="card" key={c.id}>
             <h3>
               <span>{c.icono} {c.nombre}</span>
-              <span className="pill mute">{c.productos.length}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="pill mute">{c.productos.length}</span>
+                <button className="btn sm" onClick={() => setCatModal({ id: c.id, nombre: c.nombre, icono: c.icono || '' })}><Pencil size={13} /></button>
+                {c.productos.length === 0 && (
+                  <button className="btn sm danger" onClick={() => eliminarCategoria(c.id, c.nombre)}><Trash2 size={13} /></button>
+                )}
+              </span>
             </h3>
             {c.productos.map((p: any) => {
               const margen = p.precio > 0 ? Math.round(((p.precio - (p.costo || 0)) / p.precio) * 100) : 0;
@@ -222,14 +244,14 @@ export default function Productos() {
 
       {catModal && (
         <Modal onClose={() => setCatModal(null)}>
-          <h2>Nueva categoría</h2>
+          <h2>{catModal.id ? 'Editar categoría' : 'Nueva categoría'}</h2>
           <div className="sub">Ej: Cocteles, Cervezas, Botellas</div>
           <label>Nombre</label>
           <input value={catModal.nombre} onChange={(e) => setCatModal({ ...catModal, nombre: e.target.value })} placeholder="Cocteles" autoFocus />
           <label>Icono (emoji)</label>
           <input value={catModal.icono} onChange={(e) => setCatModal({ ...catModal, icono: e.target.value })} placeholder="🍹" />
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardarCategoria}>
-            Guardar categoría
+            {catModal.id ? 'Guardar cambios' : 'Guardar categoría'}
           </button>
         </Modal>
       )}
