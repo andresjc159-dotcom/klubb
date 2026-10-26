@@ -31,6 +31,7 @@ export default function Caja() {
   const [meseros, setMeseros] = useState<any[]>([]);
   const [pagoModal, setPagoModal] = useState<any>(null);
   const [pagoMetodo, setPagoMetodo] = useState('EFECTIVO');
+  const [cobrarMesaModal, setCobrarMesaModal] = useState<any>(null);
   const [movForm, setMovForm] = useState<{ tipo: string; monto: string; concepto: string; productoId: string; cantidad: string; metodo: string } | null>(null);
 
   const cargarMetodos = useCallback(() => {
@@ -119,6 +120,27 @@ export default function Caja() {
       });
       toast('Pago registrado', 'ok');
       setPagoModal(null);
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
+  function totalPendienteMesa(mesaId: string) {
+    return pedidos
+      .filter((p) => p.mesa?.id === mesaId && !p.pagadoEn && p.estado !== 'CANCELADO')
+      .reduce((s, p) => s + p.total, 0);
+  }
+
+  async function cobrarMesa() {
+    if (!cobrarMesaModal) return;
+    try {
+      await api('/pedidos/pagar-mesa', {
+        method: 'POST',
+        body: JSON.stringify({ mesaId: cobrarMesaModal.mesaId, metodoPago: cobrarMesaModal.metodo }),
+      });
+      toast('Mesa cobrada', 'ok');
+      setCobrarMesaModal(null);
       cargar();
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
@@ -289,8 +311,18 @@ export default function Caja() {
         {Object.keys(porMesa).length === 0 && <div className="sub">No hay pedidos activos.</div>}
         {Object.entries(porMesa).map(([mesa, ps]) => (
           <div key={mesa} style={{ marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Armchair size={15} color="#8b95a6" /> {mesa} <span className="pill mute">{ps.length}</span>
+            <div style={{ fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Armchair size={15} color="#8b95a6" /> {mesa} <span className="pill mute">{ps.length}</span>
+              </div>
+              {totalPendienteMesa(ps[0].mesa?.id) > 0 && (
+                <button
+                  className="btn primary sm"
+                  onClick={() => setCobrarMesaModal({ mesaId: ps[0].mesa?.id, mesaNombre: mesa, metodo: 'EFECTIVO' })}
+                >
+                  Cobrar mesa {fmt(totalPendienteMesa(ps[0].mesa?.id))}
+                </button>
+              )}
             </div>
             {ps.map((p: any) => (
               <div className="list-item" key={p.id}>
@@ -463,6 +495,22 @@ export default function Caja() {
             </select>
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={registrarPago}>
               Confirmar pago
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cobrarMesaModal && (
+        <div className="modal-bg" onClick={() => setCobrarMesaModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Cobrar mesa</h2>
+            <div className="sub">Mesa {cobrarMesaModal.mesaNombre} · Total {fmt(totalPendienteMesa(cobrarMesaModal.mesaId))}</div>
+            <label>Método de pago</label>
+            <select value={cobrarMesaModal.metodo} onChange={(e) => setCobrarMesaModal({ ...cobrarMesaModal, metodo: e.target.value })}>
+              {METODOS_TODOS.map((m) => <option key={m} value={m}>{METODO_LABEL[m]}</option>)}
+            </select>
+            <button className="btn primary block" style={{ marginTop: 18 }} onClick={cobrarMesa}>
+              Confirmar cobro
             </button>
           </div>
         </div>
