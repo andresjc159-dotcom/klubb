@@ -32,6 +32,11 @@ export default function Mesero() {
   const [solicitudPago, setSolicitudPago] = useState<any>(null);
   const [cobrarModal, setCobrarModal] = useState<any>(null);
   const [cobrarMetodo, setCobrarMetodo] = useState('EFECTIVO');
+  const [mesaDetalle, setMesaDetalle] = useState<any>(null);
+  const [agregar, setAgregar] = useState(false);
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [cartMesa, setCartMesa] = useState<Record<string, number>>({});
+  const [catActiva, setCatActiva] = useState('');
   const didAct = useRef(false);
 
   const cargar = useCallback(async () => {
@@ -103,6 +108,75 @@ export default function Mesero() {
     }
     return map;
   }, [mesas]);
+
+  const pedidosMesa = useMemo(() => {
+    if (!mesaDetalle) return [];
+    return pedidos.filter((p) => p.mesaId === mesaDetalle.id);
+  }, [pedidos, mesaDetalle]);
+
+  const cat = categorias.find((c) => c.id === catActiva) || categorias[0];
+  const totalMesa = useMemo(
+    () =>
+      pedidosMesa
+        .filter((p) => !p.pagadoEn && p.estado !== 'CANCELADO')
+        .reduce((s, p) => s + p.total, 0),
+    [pedidosMesa],
+  );
+  const totalCartMesa = useMemo(
+    () =>
+      Object.entries(cartMesa).reduce((s, [id, q]) => {
+        const p = categorias.flatMap((c) => c.productos).find((x) => x.id === id);
+        return s + (p ? p.precio * q : 0);
+      }, 0),
+    [cartMesa, categorias],
+  );
+
+  function verMesa(m: any) {
+    setMesaDetalle(m);
+    setAgregar(false);
+    setCartMesa({});
+    setCatActiva('');
+    api<any[]>('/categorias')
+      .then((c) => {
+        setCategorias(c);
+        if (c[0]) setCatActiva(c[0].id);
+      })
+      .catch(() => {});
+  }
+
+  function cantidadMesa(id: string) {
+    return cartMesa[id] || 0;
+  }
+
+  function toggleMesa(id: string, d: number) {
+    setCartMesa((prev) => {
+      const n = { ...prev };
+      const q = (n[id] || 0) + d;
+      if (q <= 0) delete n[id];
+      else n[id] = q;
+      return n;
+    });
+  }
+
+  async function enviarPedidoMesa() {
+    const items = Object.entries(cartMesa).map(([productoId, cantidad]) => ({
+      productoId,
+      cantidad,
+    }));
+    if (!items.length || !mesaDetalle) return;
+    try {
+      await api('/pedidos/mesa', {
+        method: 'POST',
+        body: JSON.stringify({ mesaId: mesaDetalle.id, items }),
+      });
+      toast('Pedido enviado', 'ok');
+      setCartMesa({});
+      setAgregar(false);
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
 
   async function iniciarTurno() {
     try {
@@ -254,7 +328,7 @@ export default function Mesero() {
             </div>
             <div className="mesa-grid">
               {ms.map((m) => (
-                <div className={`mesa ${m.estado.toLowerCase()}`} key={m.id}>
+                <div className={`mesa ${m.estado.toLowerCase()}`} key={m.id} onClick={() => verMesa(m)} style={{ cursor: 'pointer' }}>
                   <div className="num">{m.nombre}</div>
                   <div className="estado">
                     <span className={`pill ${m.estado === 'LIBRE' ? 'ok' : m.estado === 'OCUPADA' ? 'warn' : 'info'}`}>
@@ -262,15 +336,15 @@ export default function Mesero() {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
-                    <button className="btn sm" onClick={() => cambiarEstadoMesa(m.id, 'OCUPADA')}>Ocupar</button>
-                    <button className="btn sm" onClick={() => cambiarEstadoMesa(m.id, 'RESERVADA')}>Reservar</button>
-                    <button className="btn sm" onClick={() => cambiarEstadoMesa(m.id, 'LIBRE')}>Liberar</button>
+                    <button className="btn sm" onClick={(e) => { e.stopPropagation(); cambiarEstadoMesa(m.id, 'OCUPADA'); }}>Ocupar</button>
+                    <button className="btn sm" onClick={(e) => { e.stopPropagation(); cambiarEstadoMesa(m.id, 'RESERVADA'); }}>Reservar</button>
+                    <button className="btn sm" onClick={(e) => { e.stopPropagation(); cambiarEstadoMesa(m.id, 'LIBRE'); }}>Liberar</button>
                   </div>
                   {totalPendienteMesa(m.id) > 0 && (
                     <button
                       className="btn primary sm"
                       style={{ marginTop: 8, width: '100%' }}
-                      onClick={() => { setCobrarModal(m); setCobrarMetodo('EFECTIVO'); }}
+                      onClick={(e) => { e.stopPropagation(); setCobrarModal(m); setCobrarMetodo('EFECTIVO'); }}
                     >
                       Cobrar {fmt(totalPendienteMesa(m.id))}
                     </button>
@@ -415,6 +489,85 @@ export default function Mesero() {
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={cobrarMesa}>
               Confirmar cobro
             </button>
+          </div>
+        </div>
+      )}
+
+      {mesaDetalle && (
+        <div className="modal-bg" onClick={() => setMesaDetalle(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h2 style={{ margin: 0 }}>{mesaDetalle.nombre}</h2>
+              <button className="btn sm" onClick={() => setMesaDetalle(null)}>Cerrar</button>
+            </div>
+
+            {!agregar ? (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button className="btn primary" onClick={() => setAgregar(true)}>+ Agregar productos</button>
+                  {totalMesa > 0 && (
+                    <button className="btn" onClick={() => { setCobrarModal(mesaDetalle); setCobrarMetodo('EFECTIVO'); }}>
+                      Pagar {fmt(totalMesa)}
+                    </button>
+                  )}
+                </div>
+
+                {pedidosMesa.length === 0 && <div className="sub">Esta mesa no tiene pedidos.</div>}
+                {pedidosMesa.map((p) => (
+                  <div className="list-item" key={p.id} style={{ padding: 10 }}>
+                    <div className="body">
+                      <div className="title">{p.codigo} · {p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}</div>
+                      <div className="meta">{fmt(p.total)}</div>
+                    </div>
+                    <span className={`pill ${p.estado === 'LISTO' ? 'ok' : p.estado === 'ENTREGADO' ? 'info' : p.estado === 'RECIBIDO' ? 'bad' : 'warn'}`}>
+                      {p.estado.replaceAll('_', ' ').toLowerCase()}
+                    </span>
+                    <span className={`pill ${p.pagadoEn ? 'ok' : 'warn'}`}>{p.pagadoEn ? 'Pagado' : 'Por pagar'}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <button className="btn sm" onClick={() => { setAgregar(false); setCartMesa({}); }}>← Volver</button>
+                  {categorias.map((c) => (
+                    <button
+                      key={c.id}
+                      className={`pill ${c.id === cat?.id ? 'ok' : 'mute'}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setCatActiva(c.id)}
+                    >
+                      {c.icono || '🍽️'} {c.nombre}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ maxHeight: 280, overflow: 'auto' }}>
+                  {cat?.productos.map((p: any) => (
+                    <div className="list-item" key={p.id} style={{ padding: 10 }}>
+                      <div className="emoji-tile">{p.emoji || '🍸'}</div>
+                      <div className="body">
+                        <div className="title">{p.nombre}</div>
+                        <div className="meta">${p.precio.toLocaleString('es-CO')}</div>
+                      </div>
+                      {cantidadMesa(p.id) > 0 ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <button className="btn sm" onClick={() => toggleMesa(p.id, -1)}>−</button>
+                          <span>{cantidadMesa(p.id)}</span>
+                          <button className="btn sm" onClick={() => toggleMesa(p.id, 1)}>+</button>
+                        </div>
+                      ) : (
+                        <button className="btn sm" onClick={() => toggleMesa(p.id, 1)}>+</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {totalCartMesa > 0 && (
+                  <button className="btn primary block" style={{ marginTop: 14 }} onClick={enviarPedidoMesa}>
+                    Enviar pedido {fmt(totalCartMesa)}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

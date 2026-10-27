@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { EstadoPedido, MetodoPago, Prisma } from '@prisma/client';
+import { EstadoPedido, MetodoPago, ModoEntrega, Prisma } from '@prisma/client';
 import { tenantEfectivo } from '../common/tenant.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../events/events.gateway';
@@ -39,6 +39,102 @@ export class PedidosController {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  @Post('mesa')
+  async crearPedidoMesa(
+    @Req() req: any,
+    @Body()
+    body: {
+      mesaId: string;
+      items: Array<{ productoId: string; cantidad: number; notas?: string }>;
+      metodoPago?: MetodoPago;
+      modo?: ModoEntrega;
+    },
+  ) {
+    const tenantId = tenantEfectivo(req.user);
+    if (!tenantId) throw new BadRequestException('Sin local asignado');
+    if (!body.mesaId || !body.items?.length) {
+      throw new BadRequestException('Mesa y productos son requeridos');
+    }
+    const mesa = await this.prisma.mesa.findUnique({
+      where: { id: body.mesaId },
+      include: { tenant: true },
+    });
+    if (!mesa || mesa.tenantId !== tenantId) {
+      throw new NotFoundException('Mesa no encontrada');
+    }
+
+    const productos = await this.prisma.producto.findMany({
+      where: { id: { in: body.items.map((i) => i.productoId) } },
+    });
+    const recetas = await this.prisma.recetaInsumo.findMany({
+      where: { productoId: { in: body.items.map((i) => i.productoId) } },
+    });
+
+    let subtotal = 0;
+    const detalles = body.items.map((item) => {
+      const producto = productos.find((p) => p.id === item.productoId);
+      if (!producto) throw new NotFoundException('Producto no encontrado');
+      subtotal += producto.precio * item.cantidad;
+      return {
+        productoId: producto.id,
+        cantidad: item.cantidad,
+        precioUnitario: producto.precio,
+        notas: item.notas,
+      };
+    });
+
+    const codigo = `#B-${await this.prisma.pedido.count() + 1}`;
+    const pin = Math.floor(1000 + Math.random() * 9000);
+
+    const pedido = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.pedido.create({
+        data: {
+          tenantId,
+          mesaId: mesa.id,
+          codigo,
+          estado: EstadoPedido.RECIBIDO,
+          modo: body.modo ?? ModoEntrega.MESA,
+          subtotal,
+          propina: 0,
+          total: subtotal,
+          metodoPago: body.metodoPago ?? MetodoPago.EFECTIVO,
+          pin,
+          meseroId: req.user.userId,
+          detalles: { create: detalles },
+        },
+        include: { mesa: { include: { zona: true } }, detalles: { include: { producto: true } } },
+      });
+
+      for (const d of detalles) {
+        await tx.producto.update({
+          where: { id: d.productoId },
+          data: { stock: { decrement: d.cantidad } },
+        });
+        await tx.movimientoInventario.create({
+          data: {
+            tenantId,
+            productoId: d.productoId,
+            tipo: 'VENTA',
+            cantidad: -d.cantidad,
+          },
+        });
+        const rec = recetas.filter((r) => r.productoId === d.productoId);
+        for (const r of rec) {
+          await tx.insumo.update({
+            where: { id: r.insumoId },
+            data: { cantidad: { decrement: r.cantidad * d.cantidad } },
+          });
+        }
+      }
+
+      return created;
+    });
+
+    this.events.emitToTenant(tenantId, 'pedido:nuevo', pedido);
+    this.events.emitToMesa(mesa.id, 'mesa:actualizada', {});
+    return pedido;
   }
 
   @Patch(':id/estado')
