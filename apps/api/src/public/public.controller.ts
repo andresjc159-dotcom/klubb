@@ -174,7 +174,8 @@ export class PublicController {
     // Balanceo de carga entre meseros (apoyo de zonas menos ocupadas)
     let meseroId: string | null = asignacion?.userId ?? null;
     let apoyo = false;
-    if (meseroId) {
+    if (meseroId && mesa.tenant.apoyoHabilitado) {
+      const umbral = mesa.tenant.umbralApoyo ?? 5;
       const meserosEnTurno = await this.prisma.user.findMany({
         where: {
           tenantId: mesa.tenantId,
@@ -204,7 +205,7 @@ export class PublicController {
       );
       const cargaAsignado = cargas.find((c) => c.id === meseroId)?.carga ?? 0;
       const menosOcupado = cargas.reduce((a, b) => (b.carga < a.carga ? b : a));
-      if (menosOcupado.id !== meseroId && cargaAsignado - menosOcupado.carga >= 5) {
+      if (menosOcupado.id !== meseroId && cargaAsignado - menosOcupado.carga >= umbral) {
         meseroId = menosOcupado.id;
         apoyo = true;
       }

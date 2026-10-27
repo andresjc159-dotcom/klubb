@@ -86,6 +86,8 @@ model Tenant {
   activo            Boolean   @default(true)
   abierto           Boolean   @default(false)
   plan              String    @default("PRO")
+  apoyoHabilitado   Boolean   @default(true)
+  umbralApoyo       Int       @default(5)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   zonas             Zona[]

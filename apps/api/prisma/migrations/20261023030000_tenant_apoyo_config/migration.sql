@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Tenant" ADD COLUMN "apoyoHabilitado" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "umbralApoyo" INTEGER NOT NULL DEFAULT 5;

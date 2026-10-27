@@ -102,6 +102,8 @@ export class LocalController {
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
+        apoyoHabilitado: true,
+        umbralApoyo: true,
       },
     });
     return tenant;
@@ -117,6 +119,8 @@ export class LocalController {
       nombre?: string;
       mensajeBienvenida?: string;
       direccion?: string;
+      apoyoHabilitado?: boolean;
+      umbralApoyo?: number;
     },
   ) {
     return this.prisma.tenant.update({
@@ -125,12 +129,17 @@ export class LocalController {
         nombre: body.nombre,
         mensajeBienvenida: body.mensajeBienvenida,
         direccion: body.direccion,
+        apoyoHabilitado: body.apoyoHabilitado,
+        umbralApoyo:
+          body.umbralApoyo != null ? Number(body.umbralApoyo) : undefined,
       },
       select: {
         nombre: true,
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
+        apoyoHabilitado: true,
+        umbralApoyo: true,
       },
     });
   }
