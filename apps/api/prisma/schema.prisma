@@ -277,6 +277,7 @@ model Pedido {
   total       Int
   metodoPago  MetodoPago?
   pin         Int?
+  apoyo       Boolean         @default(false)
   pagadoEn    DateTime?
   listoEn     DateTime?
   entregadoEn DateTime?

@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { EstadoCancion, EstadoPedido, MetodoPago, ModoEntrega } from '@prisma/client';
+import { EstadoCancion, EstadoPedido, MetodoPago, ModoEntrega, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../events/events.gateway';
@@ -171,6 +171,45 @@ export class PublicController {
       where: { mesaId },
     });
 
+    // Balanceo de carga entre meseros (apoyo de zonas menos ocupadas)
+    let meseroId: string | null = asignacion?.userId ?? null;
+    let apoyo = false;
+    if (meseroId) {
+      const meserosEnTurno = await this.prisma.user.findMany({
+        where: {
+          tenantId: mesa.tenantId,
+          role: Role.MESERO,
+          activo: true,
+          enTurno: true,
+        },
+        select: { id: true },
+      });
+      const cargas = await Promise.all(
+        meserosEnTurno.map(async (m) => ({
+          id: m.id,
+          carga: await this.prisma.pedido.count({
+            where: {
+              tenantId: mesa.tenantId,
+              meseroId: m.id,
+              estado: {
+                in: [
+                  EstadoPedido.RECIBIDO,
+                  EstadoPedido.EN_PREPARACION,
+                  EstadoPedido.LISTO,
+                ],
+              },
+            },
+          }),
+        })),
+      );
+      const cargaAsignado = cargas.find((c) => c.id === meseroId)?.carga ?? 0;
+      const menosOcupado = cargas.reduce((a, b) => (b.carga < a.carga ? b : a));
+      if (menosOcupado.id !== meseroId && cargaAsignado - menosOcupado.carga >= 5) {
+        meseroId = menosOcupado.id;
+        apoyo = true;
+      }
+    }
+
     const productos = await this.prisma.producto.findMany({
       where: { id: { in: body.items.map((i) => i.productoId) } },
     });
@@ -213,7 +252,8 @@ export class PublicController {
           metodoPago: body.metodoPago,
           pin,
           miembroId,
-          meseroId: asignacion?.userId ?? null,
+          meseroId,
+          apoyo,
           detalles: { create: detalles },
         },
         include: { mesa: { include: { zona: true } }, detalles: { include: { producto: true } } },
