@@ -141,6 +141,59 @@ export class ReportesController {
       .map(([nombre, v]) => ({ nombre, ...v }))
       .sort((a, b) => b.total - a.total);
 
+    // ---------- Tiempos promedio ----------
+    const sesiones = await this.prisma.sesionMesa.findMany({
+      where: {
+        tenantId,
+        terminadaEn: { not: null, gte: inicio, lte: fin },
+      },
+      select: { creadoEn: true, terminadaEn: true },
+    });
+    const ocupaciones = sesiones
+      .filter((s) => s.terminadaEn && s.creadoEn)
+      .map((s) => (s.terminadaEn as Date).getTime() - s.creadoEn.getTime());
+    const tiempoPromedioOcupacion = ocupaciones.length
+      ? Math.round(ocupaciones.reduce((a, b) => a + b, 0) / ocupaciones.length / 60000)
+      : 0;
+
+    const pedidosOrdenados = await this.prisma.pedido.findMany({
+      where: {
+        tenantId,
+        createdAt: { gte: inicio, lte: fin },
+        estado: { not: 'CANCELADO' },
+      },
+      select: { mesaId: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const porMesaTiempos: Record<string, Date[]> = {};
+    for (const p of pedidosOrdenados) {
+      (porMesaTiempos[p.mesaId] = porMesaTiempos[p.mesaId] || []).push(p.createdAt);
+    }
+    const gaps: number[] = [];
+    for (const times of Object.values(porMesaTiempos)) {
+      for (let i = 1; i < times.length; i++) {
+        gaps.push(times[i].getTime() - times[i - 1].getTime());
+      }
+    }
+    const tiempoPromedioEntrePedidos = gaps.length
+      ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length / 60000)
+      : 0;
+
+    const pedidosEntregados = await this.prisma.pedido.findMany({
+      where: {
+        tenantId,
+        listoEn: { not: null },
+        entregadoEn: { not: null, gte: inicio, lte: fin },
+      },
+      select: { listoEn: true, entregadoEn: true },
+    });
+    const tiemposEntrega = pedidosEntregados
+      .filter((p) => p.listoEn && p.entregadoEn)
+      .map((p) => (p.entregadoEn as Date).getTime() - (p.listoEn as Date).getTime());
+    const tiempoPromedioEntrega = tiemposEntrega.length
+      ? Math.round(tiemposEntrega.reduce((a, b) => a + b, 0) / tiemposEntrega.length / 60000)
+      : 0;
+
     // ---------- Inventario ----------
     const productos = await this.prisma.producto.findMany({
       where: { tenantId, activo: true },
@@ -206,6 +259,11 @@ export class ReportesController {
       ventasPorDia,
       ventasPorHora,
       ventasPorMesero,
+      tiempos: {
+        ocupacionPromedio: tiempoPromedioOcupacion,
+        entrePedidosPromedio: tiempoPromedioEntrePedidos,
+        entregaPromedio: tiempoPromedioEntrega,
+      },
       inventario: {
         totalActivos: productos.length,
         agotados,

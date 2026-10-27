@@ -124,6 +124,31 @@ export default function Reportes() {
           </div>
 
           <div className="card" style={{ marginTop: 16 }}>
+            <h3>Tiempos promedio</h3>
+            <div className="list-item">
+              <div className="body">
+                <div className="title">Ocupación de mesas</div>
+                <div className="meta">Desde que se ocupa hasta que se libera</div>
+              </div>
+              <b>{data.tiempos.ocupacionPromedio} min</b>
+            </div>
+            <div className="list-item">
+              <div className="body">
+                <div className="title">Entre pedidos por mesa</div>
+                <div className="meta">Cada cuánto pide una mesa</div>
+              </div>
+              <b>{data.tiempos.entrePedidosPromedio} min</b>
+            </div>
+            <div className="list-item">
+              <div className="body">
+                <div className="title">Entrega (Listo → Entregado)</div>
+                <div className="meta">Cuánto tarda el mesero en entregar</div>
+              </div>
+              <b>{data.tiempos.entregaPromedio} min</b>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginTop: 16 }}>
             <h3><Lightbulb size={16} color="#f5b301" /> Sugerencias</h3>
             {data.sugerencias.map((s: string, i: number) => (
               <div className="list-item" key={i}>

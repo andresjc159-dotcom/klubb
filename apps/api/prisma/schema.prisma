@@ -375,14 +375,15 @@ model CancionPreferida {
 }
 
 model SesionMesa {
-  id        String           @id @default(cuid())
-  tenantId  String
-  mesaId    String           @unique
-  mesa      Mesa             @relation(fields: [mesaId], references: [id], onDelete: Cascade)
-  codigo    String
-  activo    Boolean          @default(true)
-  creadoEn  DateTime         @default(now())
-  miembros  MiembroSesion[]
+  id          String           @id @default(cuid())
+  tenantId    String
+  mesaId      String           @unique
+  mesa        Mesa             @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  codigo      String
+  activo      Boolean          @default(true)
+  creadoEn    DateTime         @default(now())
+  terminadaEn DateTime?
+  miembros    MiembroSesion[]
 }
 
 model MiembroSesion {

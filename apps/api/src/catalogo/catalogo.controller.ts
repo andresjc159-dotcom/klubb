@@ -179,7 +179,7 @@ export class CatalogoController {
       }
       await this.prisma.sesionMesa.updateMany({
         where: { mesaId: id, activo: true },
-        data: { activo: false },
+        data: { activo: false, terminadaEn: new Date() },
       });
     }
     return this.prisma.mesa.update({
