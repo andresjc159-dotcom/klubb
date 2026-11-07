@@ -279,6 +279,7 @@ export class PedidosController {
       this.events.emitToMesa(subio.mesaId, 'cliente:subio-nivel', subio);
     }
     this.events.emitToTenant(updated.tenantId, 'pedido:actualizado', updated);
+    this.events.emitToMesa(updated.mesaId, 'pedido:pagado', { pedidoId: id });
     return updated;
   }
 
@@ -392,6 +393,7 @@ export class PedidosController {
 
     if (pedidos.length > 0) {
       this.events.emitToTenant(pedidos[0].tenantId, 'pedido:actualizado', {});
+      this.events.emitToMesa(body.mesaId, 'pedido:pagado', { mesaId: body.mesaId });
     }
     return { ok: true, total, pagados: pedidos.length };
   }

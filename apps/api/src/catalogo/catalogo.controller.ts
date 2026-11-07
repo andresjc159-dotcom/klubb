@@ -20,11 +20,15 @@ import { extname, join } from 'path';
 import { EstadoPedido, Role } from '@prisma/client';
 import { tenantEfectivo } from '../common/tenant.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../events/events.gateway';
 
 @Controller()
 @UseGuards(AuthGuard('jwt'))
 export class CatalogoController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventsGateway,
+  ) {}
 
   private tenantId(req: any): string {
     const id = tenantEfectivo(req.user);
@@ -182,7 +186,7 @@ export class CatalogoController {
         data: { activo: false, terminadaEn: new Date() },
       });
     }
-    return this.prisma.mesa.update({
+    const mesa = await this.prisma.mesa.update({
       where: { id },
       data: {
         nombre: body.nombre,
@@ -192,6 +196,10 @@ export class CatalogoController {
       },
       include: { zona: true },
     });
+    if (body.estado === 'LIBRE') {
+      this.events.emitToMesa(id, 'mesa:liberada', { mesaId: id });
+    }
+    return mesa;
   }
 
   @Delete('mesas/:id')
