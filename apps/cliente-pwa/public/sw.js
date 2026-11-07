@@ -1,4 +1,4 @@
-const CACHE = 'klubb-cliente-v1';
+const CACHE = 'klubb-cliente-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -15,11 +15,20 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  // No cachear API, WebSocket ni archivos subidos
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/socket.io/') ||
+    url.pathname.startsWith('/uploads/')
+  ) {
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request)
         .then((res) => {
-          if (res && res.ok && event.request.url.startsWith(self.location.origin)) {
+          if (res && res.ok) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put(event.request, clone));
           }
