@@ -111,6 +111,17 @@ export default function Mesas() {
     }
   }
 
+  async function liberarMesa(id: string, nombre: string) {
+    if (!window.confirm(`¿Liberar la mesa "${nombre}"?`)) return;
+    try {
+      await api(`/mesas/${id}`, { method: 'PATCH', body: JSON.stringify({ estado: 'LIBRE' }) });
+      toast('Mesa liberada', 'ok');
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
   async function verQR(mesa: any) {
     const url = `${CLIENT_URL}/?qr=${mesa.qrToken}`;
     const qr = await QRCode.toDataURL(url, { width: 400 });
@@ -164,6 +175,11 @@ export default function Mesas() {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 10 }}>
+                    {m.estado !== 'LIBRE' && (
+                      <button className="btn sm" onClick={(e) => { e.stopPropagation(); liberarMesa(m.id, m.nombre); }}>
+                        Liberar
+                      </button>
+                    )}
                     <button className="btn sm" onClick={(e) => { e.stopPropagation(); setMesaModal({ id: m.id, zonaId: m.zonaId, nombre: m.nombre, capacidad: m.capacidad, meseroId: asignacionMesa[m.id] || '' }); }}>
                       <Pencil size={13} />
                     </button>
