@@ -109,7 +109,7 @@ export class PublicController {
         mensajeBienvenida: mesa.tenant.mensajeBienvenida,
       },
       mesa: { id: mesa.id, nombre: mesa.nombre, zona: mesa.zona.nombre },
-      sesion: sesion
+      sesion: sesion && sesion.activo
         ? { id: sesion.id, activo: sesion.activo, miembros: sesion.miembros }
         : null,
       metodosPago: metodosDe(mesa.tenant),
@@ -536,13 +536,18 @@ export class PublicController {
     const existente = await this.prisma.sesionMesa.findUnique({
       where: { mesaId: mesa.id },
     });
-    if (existente) {
-      throw new BadRequestException('Ya existe una sesión para esta mesa');
+    if (existente && existente.activo) {
+      throw new BadRequestException('Ya existe una sesión activa para esta mesa');
     }
     const codigo = String(Math.floor(1000 + Math.random() * 9000));
-    const sesion = await this.prisma.sesionMesa.create({
-      data: { tenantId: mesa.tenantId, mesaId: mesa.id, codigo },
-    });
+    const sesion = existente
+      ? await this.prisma.sesionMesa.update({
+          where: { id: existente.id },
+          data: { activo: true, codigo, creadoEn: new Date(), terminadaEn: null },
+        })
+      : await this.prisma.sesionMesa.create({
+          data: { tenantId: mesa.tenantId, mesaId: mesa.id, codigo },
+        });
     const miembro = await this.prisma.miembroSesion.create({
       data: {
         sesionId: sesion.id,
