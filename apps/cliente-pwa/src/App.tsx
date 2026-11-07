@@ -352,6 +352,15 @@ export default function App() {
   const totalPropina = Math.round((subtotal * propina) / 100);
   const total = subtotal + totalPropina;
 
+  function limpiarSesion() {
+    if (menu) localStorage.removeItem(LS(menu.mesa.id));
+    setMiembro(null);
+    setJoinStep('landing');
+    setPedidoActivo(null);
+    setCart({});
+    setCheckout(false);
+  }
+
   async function pagar() {
     if (!menu || !miembro) return;
     setResultado(null);
@@ -366,6 +375,11 @@ export default function App() {
       }),
     });
     const data = await res.json();
+    if (res.status === 401) {
+      limpiarSesion();
+      alert('Tu sesión expiró. Únete de nuevo a la mesa para pedir.');
+      return;
+    }
     if (!res.ok) return alert(data.message || 'Error al procesar');
     setResultado({ codigo: data.codigo, pin: data.pin });
     setPedidoActivo({ id: data.id, codigo: data.codigo });
