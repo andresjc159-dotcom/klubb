@@ -111,6 +111,7 @@ export default function Mesero() {
 
   const pedidosMesa = useMemo(() => {
     if (!mesaDetalle) return [];
+    if (mesaDetalle.estado === 'LIBRE') return [];
     return pedidos.filter((p) => p.mesaId === mesaDetalle.id);
   }, [pedidos, mesaDetalle]);
 
