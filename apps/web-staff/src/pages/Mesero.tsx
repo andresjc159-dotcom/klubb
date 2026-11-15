@@ -185,6 +185,7 @@ export default function Mesero() {
       didAct.current = true;
       setEnTurno(u.enTurno);
       setOcupado(u.ocupado);
+      api('/nomina/asistencia/entrada', { method: 'POST' }).catch(() => {});
       toast('Turno iniciado', 'ok');
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
@@ -197,6 +198,7 @@ export default function Mesero() {
       didAct.current = true;
       setEnTurno(u.enTurno);
       setOcupado(u.ocupado);
+      api('/nomina/asistencia/salida', { method: 'POST' }).catch(() => {});
       toast('Turno finalizado', 'ok');
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
