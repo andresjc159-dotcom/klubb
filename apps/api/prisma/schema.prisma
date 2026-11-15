@@ -392,6 +392,7 @@ model Turno {
   horaInicio String
   horaFin    String
   tipo       String
+  valor      Int      @default(0)
   createdAt  DateTime @default(now())
 }
 
@@ -441,6 +442,7 @@ model NominaItem {
   userId        String
   user          User     @relation(fields: [userId], references: [id])
   base          Int
+  valorTurnos   Int      @default(0)
   propinas      Int
   comisiones    Int
   otrosIngresos Int

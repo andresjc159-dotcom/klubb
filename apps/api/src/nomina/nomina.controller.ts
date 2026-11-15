@@ -41,7 +41,7 @@ export class NominaController {
   @Post('turnos')
   async crearTurno(
     @Req() req: any,
-    @Body() body: { userId: string; fecha: string; horaInicio: string; horaFin: string; tipo: string },
+    @Body() body: { userId: string; fecha: string; horaInicio: string; horaFin: string; tipo: string; valor?: number },
   ) {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
@@ -56,6 +56,7 @@ export class NominaController {
         horaInicio: body.horaInicio,
         horaFin: body.horaFin,
         tipo: body.tipo || 'NOCHE',
+        valor: Number(body.valor ?? 0),
       },
       include: { user: { select: { id: true, nombre: true } } },
     });
@@ -253,8 +254,13 @@ export class NominaController {
           where: { tenantId, meseroId: u.id, estado: { not: 'CANCELADO' }, createdAt: { gte: inicio, lte: fin } },
           _sum: { total: true },
         });
+        const turnos = await this.prisma.turno.aggregate({
+          where: { tenantId, userId: u.id, fecha: { gte: body.fechaInicio, lte: body.fechaFin } },
+          _sum: { valor: true },
+        });
         const totalVentas = ventas._sum.total ?? 0;
         const propinaTotal = propinas._sum.propina ?? 0;
+        const valorTurnos = turnos._sum.valor ?? 0;
 
         let comisiones = 0;
         let otrosIngresos = 0;
@@ -282,10 +288,11 @@ export class NominaController {
         const aportes = Math.round(
           (base * (config.aporteSalud + config.aportePension + config.aporteArl + config.aporteCaja)) / 100,
         );
-        const neto = base + propinaTotal + comisiones + otrosIngresos - deducciones;
+        const neto = base + valorTurnos + propinaTotal + comisiones + otrosIngresos - deducciones;
         return {
           userId: u.id,
           base,
+          valorTurnos,
           propinas: propinaTotal,
           comisiones,
           otrosIngresos,

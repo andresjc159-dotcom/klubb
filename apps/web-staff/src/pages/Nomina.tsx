@@ -91,11 +91,12 @@ export default function Nomina() {
     const rows: string[][] = [];
     rows.push(['Nómina', n.periodo]);
     rows.push([]);
-    rows.push(['Empleado', 'Base', 'Propinas', 'Comisiones', 'Otros', 'Deducciones', 'Prestaciones', 'Aportes', 'Neto']);
+    rows.push(['Empleado', 'Base', 'Turnos', 'Propinas', 'Comisiones', 'Otros', 'Deducciones', 'Prestaciones', 'Aportes', 'Neto']);
     (n.items || []).forEach((i: any) =>
       rows.push([
         i.user?.nombre,
         String(i.base),
+        String(i.valorTurnos ?? 0),
         String(i.propinas),
         String(i.comisiones),
         String(i.otrosIngresos),
@@ -252,6 +253,7 @@ export default function Nomina() {
                   <tr>
                     <th style={{ textAlign: 'left', padding: 6 }}>Empleado</th>
                     <th style={{ padding: 6 }}>Base</th>
+                    <th style={{ padding: 6 }}>Turnos</th>
                     <th style={{ padding: 6 }}>Propinas</th>
                     <th style={{ padding: 6 }}>Comisiones</th>
                     <th style={{ padding: 6 }}>Otros</th>
@@ -266,6 +268,7 @@ export default function Nomina() {
                     <tr key={i.id} style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: 6 }}>{i.user?.nombre}</td>
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.base)}</td>
+                      <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.valorTurnos ?? 0)}</td>
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.propinas)}</td>
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.comisiones)}</td>
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.otrosIngresos)}</td>

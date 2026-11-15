@@ -116,7 +116,7 @@ export default function Turnos() {
                           <button className="btn sm danger" style={{ marginTop: 4 }} onClick={() => eliminarTurno(t.id)}><Trash2 size={11} /></button>
                         </div>
                       ) : (
-                        <button className="btn sm" onClick={() => setForm({ userId: u.id, fecha, horaInicio: '18:00', horaFin: '02:00', tipo: 'NOCHE' })}><Plus size={13} /></button>
+                        <button className="btn sm" onClick={() => setForm({ userId: u.id, fecha, horaInicio: '18:00', horaFin: '02:00', tipo: 'NOCHE', valor: '0' })}><Plus size={13} /></button>
                       )}
                     </td>
                   );
@@ -153,6 +153,8 @@ export default function Turnos() {
             <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
               {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
+            <label>Valor del turno (COP)</label>
+            <input type="number" min={0} value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="0" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label>Hora inicio</label>
