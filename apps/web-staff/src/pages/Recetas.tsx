@@ -167,6 +167,26 @@ export default function Recetas() {
           )}
         </div>
       </div>
+
+      <div className="card" style={{ marginTop: 16, background: 'rgba(56,189,248,.05)', borderColor: 'rgba(56,189,248,.25)' }}>
+        <h3>¿Cómo se calcula el costo de la receta?</h3>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.9, color: '#8b95a6' }}>
+          <li>Cada insumo tiene un <b style={{ color: '#cbd5e1' }}>costo por unidad</b> (lo defines en la sección "Insumos").</li>
+          <li>La <b style={{ color: '#cbd5e1' }}>cantidad</b> es lo que ese producto consume del insumo (ej. <b>0.03</b> de una botella de ron).</li>
+          <li>
+            <b style={{ color: '#cbd5e1' }}>Costo receta</b> = suma de (cantidad × costo del insumo) de todos los insumos.
+          </li>
+          <li>
+            <b style={{ color: '#cbd5e1' }}>Margen</b> = precio de venta − costo receta. El porcentaje se muestra en verde si es positivo.
+          </li>
+          <li>
+            Si un producto <b style={{ color: '#cbd5e1' }}>no tiene insumos</b>, su costo receta es $0 y su margen aparece como 100%.
+          </li>
+          <li>
+            Usa cantidades en <b style={{ color: '#cbd5e1' }}>fracción de la unidad</b> del insumo: si compras una botella y usas una copa, escribe la fracción (0.03), no "1 botella".
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }
