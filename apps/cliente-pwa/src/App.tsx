@@ -36,7 +36,7 @@ interface Promocion {
 interface Menu {
   abierto?: boolean;
   mensaje?: string;
-  tenant: { id: string; nombre: string; mensajeBienvenida: string; logoUrl?: string };
+  tenant: { id: string; nombre: string; mensajeBienvenida: string; logoUrl?: string; colorPrimario?: string; colorMarca?: string };
   mesa: { id: string; nombre: string; zona: string };
   mesero?: { nombre: string; fotoUrl?: string } | null;
   sesion: null | { id: string; activo: boolean; miembros: { id: string; alias: string }[] };
@@ -55,6 +55,26 @@ interface Miembro {
 }
 
 const LS = (mesaId: string) => `klubb_miembro_${mesaId}`;
+
+const hexToRgb = (hex: string) => {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(v, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+};
+const lighten = (hex: string, amt = 0.2) => {
+  const { r, g, b } = hexToRgb(hex);
+  const mix = (c: number) => Math.round(c + (255 - c) * amt);
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+};
+
+function BrandLogo({ logo, nombre }: { logo?: string; nombre: string }) {
+  return logo ? (
+    <img src={logo} alt={nombre} style={{ width: 84, height: 84, borderRadius: 24, objectFit: 'cover', margin: '0 auto 18px', boxShadow: '0 0 44px rgba(0,0,0,.25)' }} />
+  ) : (
+    <div className="brand-mark">{nombre[0]}</div>
+  );
+}
 
 const METODO_LABEL: Record<string, string> = {
   EFECTIVO: 'Efectivo',
@@ -101,7 +121,7 @@ const ESTADO_PILL: Record<string, string> = {
 function useMenu() {
   const qr = useMemo(() => new URLSearchParams(window.location.search).get('qr'), []);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [cerrado, setCerrado] = useState<{ mensaje: string; nombre?: string } | null>(null);
+  const [cerrado, setCerrado] = useState<{ mensaje: string; nombre?: string; logoUrl?: string; colorPrimario?: string; colorMarca?: string } | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -113,7 +133,7 @@ function useMenu() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return setError('Mesa no encontrada');
-        if (data.abierto === false) return setCerrado({ mensaje: data.mensaje, nombre: data.tenant?.nombre });
+        if (data.abierto === false) return setCerrado({ mensaje: data.mensaje, nombre: data.tenant?.nombre, logoUrl: data.tenant?.logoUrl, colorPrimario: data.tenant?.colorPrimario, colorMarca: data.tenant?.colorMarca });
         setMenu(data);
       })
       .catch(() => setError('No se pudo cargar el menú'));
@@ -124,6 +144,17 @@ function useMenu() {
 
 export default function App() {
   const { qr, menu, cerrado, error } = useMenu();
+
+  useEffect(() => {
+    const color = menu?.tenant?.colorPrimario || cerrado?.colorPrimario;
+    if (color) {
+      const root = document.documentElement;
+      root.style.setProperty('--accent', color);
+      root.style.setProperty('--accent2', lighten(color));
+    }
+    const letra = menu?.tenant?.colorMarca || cerrado?.colorMarca;
+    if (letra) document.documentElement.style.setProperty('--marca-letra', letra);
+  }, [menu, cerrado]);
 
   const [miembro, setMiembro] = useState<Miembro | null>(null);
   const [tab, setTab] = useState<'menu' | 'cuenta' | 'musica'>('menu');
@@ -487,7 +518,10 @@ export default function App() {
     return (
       <div className="app">
         <div className="centered">
-          <h2 style={{ marginBottom: 8 }}>{cerrado.nombre || 'Local'}</h2>
+          {cerrado.logoUrl && (
+            <img src={cerrado.logoUrl} alt="logo" style={{ width: 120, height: 120, borderRadius: 24, objectFit: 'cover', marginBottom: 14 }} />
+          )}
+          <h2 style={{ marginBottom: 8, color: 'var(--marca-letra)' }}>{cerrado.nombre || 'Local'}</h2>
           <div className="subtitle" style={{ color: '#8b95a6' }}>{cerrado.mensaje}</div>
         </div>
       </div>
@@ -545,7 +579,7 @@ export default function App() {
         <div className="app">
           <div className="landing">
             <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> Volver</button>
-            <div className="brand-mark">{menu.tenant.nombre[0]}</div>
+            <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
             <h1>Iniciar sesión</h1>
             <div className="welcome">Ingresa con tu teléfono y contraseña.</div>
             <div className="opts">
@@ -564,7 +598,7 @@ export default function App() {
         <div className="app">
           <div className="landing">
             <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> Volver</button>
-            <div className="brand-mark">{menu.tenant.nombre[0]}</div>
+            <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
             <h1>Crear cuenta</h1>
             <div className="welcome">Nombre, teléfono y contraseña. ¡Y listo!</div>
             <div className="opts">
@@ -583,8 +617,8 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
-            <div className="brand-mark">{menu.tenant.nombre[0]}</div>
-            <h1>{menu.tenant.nombre}</h1>
+            <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
+            <h1 style={{ color: 'var(--marca-letra)' }}>{menu.tenant.nombre}</h1>
             <div className="mesa-pill">
               <Armchair size={14} /> {menu.mesa.nombre} · {menu.mesa.zona}
             </div>
@@ -613,7 +647,7 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
-            <div className="brand-mark">{menu.tenant.nombre[0]}</div>
+            <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
             <h1>Unirse a {menu.mesa.nombre}</h1>
             <div className="welcome">Esta mesa ya está en curso. Pide el código al anfitrión.</div>
             <div className="opts">
@@ -647,7 +681,7 @@ export default function App() {
           <button className="back" onClick={() => setJoinStep(joinCtx === 'crear' ? 'landing' : 'codigo')}>
             <ChevronLeft size={16} /> Volver
           </button>
-          <div className="brand-mark">{menu.tenant.nombre[0]}</div>
+          <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
           <h1>{joinCtx === 'crear' ? '¿Cómo te llamas?' : 'Tu nombre en la mesa'}</h1>
           <div className="welcome">Así te identificarán los demás en la mesa.</div>
           <div className="opts">
@@ -671,9 +705,13 @@ export default function App() {
     <div className="app">
       <div className="hero">
         <div className="hero-top">
-          <div className="avatar">{menu.tenant.nombre[0]}</div>
+          {menu.tenant.logoUrl ? (
+            <img src={menu.tenant.logoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div className="avatar">{menu.tenant.nombre[0]}</div>
+          )}
           <div style={{ flex: 1 }}>
-            <div className="title">{menu.tenant.nombre}</div>
+            <div className="title" style={{ color: 'var(--marca-letra)' }}>{menu.tenant.nombre}</div>
             <div className="subtitle">{menu.mesa.nombre} · {menu.mesa.zona}</div>
           </div>
           {miembro.codigo && (

@@ -45,11 +45,24 @@ export class PublicController {
     });
     if (!mesa) throw new NotFoundException('Mesa no encontrada');
 
+    const marca = await this.prisma.marca.findUnique({
+      where: { id: mesa.tenant.marcaId },
+      select: { colorPrimario: true, colorMarca: true },
+    });
+    const colorPrimario = marca?.colorPrimario ?? '#f5b301';
+    const colorMarca = marca?.colorMarca ?? '#ffffff';
+
     if (!mesa.tenant.abierto) {
       return {
         abierto: false,
         mensaje: 'El local no abre aún. Vuelve más tarde.',
-        tenant: { id: mesa.tenant.id, nombre: mesa.tenant.nombre },
+        tenant: {
+          id: mesa.tenant.id,
+          nombre: mesa.tenant.nombre,
+          logoUrl: mesa.tenant.logoUrl,
+          colorPrimario,
+          colorMarca,
+        },
         mesa: { nombre: mesa.nombre },
       };
     }
@@ -115,6 +128,8 @@ export class PublicController {
         nombre: mesa.tenant.nombre,
         logoUrl: mesa.tenant.logoUrl,
         mensajeBienvenida: mesa.tenant.mensajeBienvenida,
+        colorPrimario,
+        colorMarca,
       },
       mesa: { id: mesa.id, nombre: mesa.nombre, zona: mesa.zona.nombre },
       mesero,
