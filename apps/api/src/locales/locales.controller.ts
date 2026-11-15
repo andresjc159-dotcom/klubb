@@ -67,6 +67,31 @@ export class LocalesController {
     };
   }
 
+  @Get('mi-marca')
+  async miMarca(@Req() req: any) {
+    const marca = await this.prisma.marca.findUnique({
+      where: { id: req.user.marcaId },
+      select: { id: true, nombre: true, colorPrimario: true, colorMarca: true },
+    });
+    if (!marca) throw new BadRequestException('No tienes una marca asignada');
+    return marca;
+  }
+
+  @Patch('mi-marca')
+  async editarMiMarca(
+    @Req() req: any,
+    @Body() body: { colorPrimario?: string; colorMarca?: string },
+  ) {
+    return this.prisma.marca.update({
+      where: { id: req.user.marcaId },
+      data: {
+        colorPrimario: body.colorPrimario,
+        colorMarca: body.colorMarca,
+      },
+      select: { id: true, nombre: true, colorPrimario: true, colorMarca: true },
+    });
+  }
+
   @Post()
   async crear(
     @Req() req: any,

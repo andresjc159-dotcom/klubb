@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, MapPin, Pencil, Plus, Receipt, Store, Trash2, TrendingUp } from 'lucide-react';
 import { api, setToken } from '../lib/api';
 import { useToast } from '../components/Toast';
+import ColorPicker from '../components/ColorPicker';
 
 const fmt = (n: number) => '$' + (n || 0).toLocaleString('es-CO');
 
@@ -19,16 +20,30 @@ export default function Locales() {
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [consolidado, setConsolidado] = useState<any>(null);
+  const [marca, setMarca] = useState<any>(null);
   const [form, setForm] = useState<{ id?: string; nombre: string; direccion: string; mensajeBienvenida: string; plan: string } | null>(null);
 
   const cargar = useCallback(() => {
     api<any[]>('/locales').then(setLocales).catch(console.error);
     api<any>('/locales/consolidado').then(setConsolidado).catch(() => {});
+    api<any>('/locales/mi-marca').then(setMarca).catch(() => {});
   }, []);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  async function guardarMarca() {
+    try {
+      await api('/locales/mi-marca', {
+        method: 'PATCH',
+        body: JSON.stringify({ colorPrimario: marca.colorPrimario, colorMarca: marca.colorMarca }),
+      });
+      toast('Tema de la marca guardado', 'ok');
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
 
   async function entrar(id: string) {
     try {
@@ -82,6 +97,23 @@ export default function Locales() {
           <Plus size={16} /> Nuevo local
         </button>
       </div>
+
+      {marca && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div className="stat-icon" style={{ background: 'rgba(245,179,1,.14)' }}>
+              <Store size={20} color="#f5b301" />
+            </div>
+            <div>
+              <div className="title" style={{ fontWeight: 700 }}>Tema de la marca: {marca.nombre}</div>
+              <div className="sub">Estos colores se aplican a todos los bares de tu marca</div>
+            </div>
+          </div>
+          <ColorPicker label="Color principal (botones y acentos)" value={marca.colorPrimario} onChange={(c) => setMarca({ ...marca, colorPrimario: c })} />
+          <ColorPicker label="Color del nombre (letras)" value={marca.colorMarca} onChange={(c) => setMarca({ ...marca, colorMarca: c })} />
+          <button className="btn primary" style={{ marginTop: 16 }} onClick={guardarMarca}>Guardar tema</button>
+        </div>
+      )}
 
       {consolidado && (
         <>
