@@ -30,7 +30,7 @@ export class MarcasController {
           where: { role: Role.MASTER, activo: true },
           select: { id: true, nombre: true, email: true },
         },
-        _count: { select: { tenants: true } },
+        tenants: { select: { id: true, nombre: true } },
       },
       orderBy: { nombre: 'asc' },
     });
@@ -65,6 +65,20 @@ export class MarcasController {
       throw new BadRequestException('La marca tiene locales asociados');
     }
     return this.prisma.marca.delete({ where: { id } });
+  }
+
+  @Patch(':id/tenants/:tenantId')
+  async moverTenant(
+    @Param('id') id: string,
+    @Param('tenantId') tenantId: string,
+  ) {
+    const marca = await this.prisma.marca.findUnique({ where: { id } });
+    if (!marca) throw new BadRequestException('Marca no encontrada');
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { marcaId: id },
+      select: { id: true, nombre: true, marcaId: true },
+    });
   }
 
   @Post(':id/masters')
