@@ -123,6 +123,8 @@ export class LocalController {
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
+        colorPrimario: true,
+        colorMarca: true,
         apoyoHabilitado: true,
         umbralApoyo: true,
       },
@@ -140,6 +142,8 @@ export class LocalController {
       nombre?: string;
       mensajeBienvenida?: string;
       direccion?: string;
+      colorPrimario?: string;
+      colorMarca?: string;
       apoyoHabilitado?: boolean;
       umbralApoyo?: number;
     },
@@ -150,6 +154,8 @@ export class LocalController {
         nombre: body.nombre,
         mensajeBienvenida: body.mensajeBienvenida,
         direccion: body.direccion,
+        colorPrimario: body.colorPrimario,
+        colorMarca: body.colorMarca,
         apoyoHabilitado: body.apoyoHabilitado,
         umbralApoyo:
           body.umbralApoyo != null ? Number(body.umbralApoyo) : undefined,
@@ -159,6 +165,8 @@ export class LocalController {
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
+        colorPrimario: true,
+        colorMarca: true,
         apoyoHabilitado: true,
         umbralApoyo: true,
       },

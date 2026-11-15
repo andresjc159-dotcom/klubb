@@ -87,6 +87,8 @@ model Tenant {
   logoUrl           String?
   mensajeBienvenida String?
   direccion         String?
+  colorPrimario     String    @default("#f5b301")
+  colorMarca        String    @default("#ffffff")
   metodosPago       Json?
   activo            Boolean   @default(true)
   abierto           Boolean   @default(false)

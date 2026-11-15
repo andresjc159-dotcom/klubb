@@ -5,22 +5,26 @@ import { useToast } from '../components/Toast';
 
 export default function Config() {
   const toast = useToast();
-  const [form, setForm] = useState<{ nombre: string; mensajeBienvenida: string; direccion: string; apoyoHabilitado: boolean; umbralApoyo: string }>({
+  const [form, setForm] = useState<{ nombre: string; mensajeBienvenida: string; direccion: string; colorPrimario: string; colorMarca: string; apoyoHabilitado: boolean; umbralApoyo: string }>({
     nombre: '',
     mensajeBienvenida: '',
     direccion: '',
+    colorPrimario: '#f5b301',
+    colorMarca: '#ffffff',
     apoyoHabilitado: true,
     umbralApoyo: '5',
   });
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const cargar = useCallback(() => {
-    api<{ nombre: string; mensajeBienvenida?: string; direccion?: string; logoUrl?: string; apoyoHabilitado?: boolean; umbralApoyo?: number }>('/local/config')
+    api<{ nombre: string; mensajeBienvenida?: string; direccion?: string; logoUrl?: string; colorPrimario?: string; colorMarca?: string; apoyoHabilitado?: boolean; umbralApoyo?: number }>('/local/config')
       .then((c) => {
         setForm({
           nombre: c.nombre || '',
           mensajeBienvenida: c.mensajeBienvenida || '',
           direccion: c.direccion || '',
+          colorPrimario: c.colorPrimario || '#f5b301',
+          colorMarca: c.colorMarca || '#ffffff',
           apoyoHabilitado: c.apoyoHabilitado ?? true,
           umbralApoyo: String(c.umbralApoyo ?? 5),
         });
@@ -41,6 +45,8 @@ export default function Config() {
           nombre: form.nombre,
           mensajeBienvenida: form.mensajeBienvenida,
           direccion: form.direccion,
+          colorPrimario: form.colorPrimario,
+          colorMarca: form.colorMarca,
           apoyoHabilitado: form.apoyoHabilitado,
           umbralApoyo: Number(form.umbralApoyo),
         }),
@@ -101,6 +107,16 @@ export default function Config() {
           <input value={form.mensajeBienvenida} onChange={(e) => setForm({ ...form, mensajeBienvenida: e.target.value })} placeholder="¡Bienvenido!" />
           <label>Dirección</label>
           <input value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} placeholder="Medellín" />
+          <label>Color principal (botones y acentos)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="color" value={form.colorPrimario} onChange={(e) => setForm({ ...form, colorPrimario: e.target.value })} style={{ width: 48, height: 36, padding: 0, border: 'none', background: 'none' }} />
+            <span className="sub">{form.colorPrimario}</span>
+          </div>
+          <label>Color del nombre (letras)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="color" value={form.colorMarca} onChange={(e) => setForm({ ...form, colorMarca: e.target.value })} style={{ width: 48, height: 36, padding: 0, border: 'none', background: 'none' }} />
+            <span className="sub">{form.colorMarca}</span>
+          </div>
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardar}>
             <Save size={16} /> Guardar
           </button>

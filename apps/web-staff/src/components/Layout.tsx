@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { api } from '../lib/api';
 import {
   Armchair,
   Award,
@@ -63,6 +64,19 @@ export default function Layout() {
   const isDj = role === 'DJ';
 
   const [nivelUp, setNivelUp] = useState<any>(null);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    api('/local/config').then(setConfig).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!config?.colorPrimario) return;
+    const root = document.documentElement;
+    root.style.setProperty('--accent', config.colorPrimario);
+    root.style.setProperty('--accent2', config.colorPrimario);
+    root.style.setProperty('--gold-grad', `linear-gradient(135deg, ${config.colorPrimario}, ${config.colorPrimario})`);
+  }, [config]);
 
   useEffect(() => {
     if (role !== 'ADMIN' && role !== 'MASTER') return;
@@ -104,9 +118,22 @@ export default function Layout() {
     <div className="layout">
       <aside className="sidebar">
         <div className="brand">
-          <div className="logo-mark">K</div>
-          <div>
-            KLUB<span className="gold">B</span>
+          <div className="logo-mark" style={{ overflow: 'hidden' }}>
+            {config?.logoUrl ? (
+              <img src={config.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : 'K'}
+          </div>
+          <div style={{ color: config?.colorMarca || '#ffffff', fontWeight: 700 }}>
+            {(() => {
+              const nombre = config?.nombre || 'KLUBB';
+              if (nombre.length <= 1) return nombre;
+              return (
+                <>
+                  {nombre.slice(0, -1)}
+                  <span style={{ color: config?.colorPrimario || '#f5b301' }}>{nombre.slice(-1)}</span>
+                </>
+              );
+            })()}
           </div>
         </div>
         {links
