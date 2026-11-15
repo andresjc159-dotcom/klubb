@@ -124,6 +124,9 @@ export class LocalesController {
   async entrar(@Req() req: any, @Param('id') id: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
     if (!tenant) throw new BadRequestException('Local no encontrado');
+    if (req.user.role === Role.MASTER && tenant.marcaId !== req.user.marcaId) {
+      throw new BadRequestException('Este local no pertenece a tu marca');
+    }
     await this.prisma.user.update({
       where: { id: req.user.userId },
       data: { tenantActivoId: id },
