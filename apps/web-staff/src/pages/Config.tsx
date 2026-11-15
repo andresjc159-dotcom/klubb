@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Save, Store } from 'lucide-react';
+import { Save, Store, Users } from 'lucide-react';
 import { api, getToken } from '../lib/api';
 import { useToast } from '../components/Toast';
 
@@ -124,20 +124,41 @@ export default function Config() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3>Apoyo entre zonas (balanceo de meseros)</h3>
-        <div className="sub" style={{ marginBottom: 12, lineHeight: 1.6 }}>
-          Cuando una zona está muy ocupada, el sistema redirige los pedidos nuevos al mesero en turno menos ocupado (aunque sea de otra zona), para equilibrar la carga. Los llamados de cada cliente siempre van al mesero titular de su mesa.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <div className="stat-icon" style={{ background: 'rgba(56,189,248,.14)' }}>
+            <Users size={20} color="#38bdf8" />
+          </div>
+          <div>
+            <h3 style={{ margin: 0 }}>Apoyo entre zonas</h3>
+            <div className="sub" style={{ marginTop: 0 }}>Balanceo automático de meseros</div>
+          </div>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="checkbox" checked={form.apoyoHabilitado} onChange={(e) => setForm({ ...form, apoyoHabilitado: e.target.checked })} />
-          Activar apoyo automático entre zonas
-        </label>
-        <label style={{ marginTop: 14 }}>Diferencia de pedidos activos para redirigir (umbral)</label>
+
+        <div className="sub" style={{ marginBottom: 16, lineHeight: 1.7 }}>
+          Cuando una zona está muy ocupada, el sistema redirige los pedidos nuevos al mesero en turno menos ocupado (aunque sea de otra zona), para equilibrar la carga. Los llamados siempre van al mesero titular de la mesa.
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 14, background: 'rgba(56,189,248,.06)', border: '1px solid rgba(56,189,248,.18)', borderRadius: 14, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Activar apoyo automático</div>
+            <div className="meta">Meseros de zonas tranquilas ayudan en zonas ocupadas</div>
+          </div>
+          <button
+            className={`pill ${form.apoyoHabilitado ? 'ok' : 'mute'}`}
+            style={{ cursor: 'pointer', padding: '8px 16px', border: 'none', fontSize: 13 }}
+            onClick={() => setForm({ ...form, apoyoHabilitado: !form.apoyoHabilitado })}
+          >
+            {form.apoyoHabilitado ? 'Activado' : 'Desactivado'}
+          </button>
+        </div>
+
+        <label>Diferencia de pedidos activos para redirigir (umbral)</label>
         <input type="number" min={1} value={form.umbralApoyo} onChange={(e) => setForm({ ...form, umbralApoyo: e.target.value })} placeholder="5" />
         <div className="sub" style={{ marginTop: 6 }}>
           Ejemplo: con umbral 5, si un mesero tiene 5 o más pedidos activos que otro, el siguiente pedido se asigna al menos ocupado (marcado como "Apoyo").
         </div>
-        <button className="btn primary" style={{ marginTop: 14 }} onClick={guardar}>
+
+        <button className="btn primary" style={{ marginTop: 16 }} onClick={guardar}>
           <Save size={16} /> Guardar
         </button>
       </div>
