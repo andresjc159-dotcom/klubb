@@ -38,6 +38,10 @@ export default function Mesero() {
   const [cartMesa, setCartMesa] = useState<Record<string, number>>({});
   const [catActiva, setCatActiva] = useState('');
   const didAct = useRef(false);
+  const [marcarModal, setMarcarModal] = useState<null | { tipo: 'entrada' | 'salida' }>(null);
+  const [ubi, setUbi] = useState<null | { lat: number; lon: number; error?: boolean }>(null);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [marcando, setMarcando] = useState(false);
 
   const cargar = useCallback(async () => {
     const [m, p] = await Promise.all([api<any[]>('/mis-mesas'), api<any[]>('/pedidos')]);
@@ -180,28 +184,76 @@ export default function Mesero() {
   }
 
   async function iniciarTurno() {
-    try {
-      const u = await api('/staff/turno/iniciar', { method: 'POST' });
-      didAct.current = true;
-      setEnTurno(u.enTurno);
-      setOcupado(u.ocupado);
-      api('/nomina/asistencia/entrada', { method: 'POST' }).catch(() => {});
-      toast('Turno iniciado', 'ok');
-    } catch (e: any) {
-      toast(e.message || 'Error', 'bad');
-    }
+    abrirMarcar('entrada');
   }
 
   async function finalizarTurno() {
+    abrirMarcar('salida');
+  }
+
+  function abrirMarcar(tipo: 'entrada' | 'salida') {
+    setFotoFile(null);
+    setMarcando(false);
+    setMarcarModal({ tipo });
+    setUbi(null);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUbi({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => setUbi({ lat: 0, lon: 0, error: true }),
+        { timeout: 8000, enableHighAccuracy: true },
+      );
+    } else {
+      setUbi({ lat: 0, lon: 0, error: true });
+    }
+  }
+
+  async function subirFotoAsistencia(file: File): Promise<string | undefined> {
+    const form = new FormData();
+    form.append('foto', file);
     try {
-      const u = await api('/staff/turno/finalizar', { method: 'POST' });
-      didAct.current = true;
-      setEnTurno(u.enTurno);
-      setOcupado(u.ocupado);
-      api('/nomina/asistencia/salida', { method: 'POST' }).catch(() => {});
-      toast('Turno finalizado', 'ok');
+      const res = await fetch('/api/nomina/asistencia/foto', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return data.url;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function confirmarMarcado() {
+    if (!marcarModal || marcando) return;
+    setMarcando(true);
+    try {
+      const foto = fotoFile ? await subirFotoAsistencia(fotoFile) : undefined;
+      const payload = {
+        lat: ubi?.lat ?? null,
+        lon: ubi?.lon ?? null,
+        foto,
+      };
+      if (marcarModal.tipo === 'entrada') {
+        const u = await api('/staff/turno/iniciar', { method: 'POST' });
+        didAct.current = true;
+        setEnTurno(u.enTurno);
+        setOcupado(u.ocupado);
+        await api('/nomina/asistencia/entrada', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Turno iniciado', 'ok');
+      } else {
+        const u = await api('/staff/turno/finalizar', { method: 'POST' });
+        didAct.current = true;
+        setEnTurno(u.enTurno);
+        setOcupado(u.ocupado);
+        await api('/nomina/asistencia/salida', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Turno finalizado', 'ok');
+      }
+      setMarcarModal(null);
     } catch (e: any) {
       toast(e.message || 'Error', 'bad');
+    } finally {
+      setMarcando(false);
     }
   }
 
@@ -571,6 +623,65 @@ export default function Mesero() {
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {marcarModal && (
+        <div className="modal-bg" onClick={() => setMarcarModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{marcarModal.tipo === 'entrada' ? 'Marcar entrada' : 'Marcar salida'}</h2>
+            <div className="sub" style={{ marginBottom: 12 }}>
+              Registro de asistencia con ubicación y foto (opcional)
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: 12,
+                background: 'rgba(56,189,248,.08)',
+                borderRadius: 12,
+                marginBottom: 12,
+                fontSize: 13,
+              }}
+            >
+              <MapPin size={18} color="#38bdf8" />
+              {!ubi ? (
+                <span className="sub">Obteniendo ubicación…</span>
+              ) : ubi.error ? (
+                <span className="sub">No se pudo obtener la ubicación (se registrará sin coordenadas).</span>
+              ) : (
+                <span>
+                  Ubicación: <b>{ubi.lat.toFixed(5)}, {ubi.lon.toFixed(5)}</b>
+                </span>
+              )}
+            </div>
+            <label style={{ cursor: 'pointer' }} className="btn block">
+              {fotoFile ? '📸 Foto lista — cambiar' : '📸 Tomar foto (opcional)'}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setFotoFile(f);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <button
+              className="btn primary block"
+              style={{ marginTop: 14 }}
+              onClick={confirmarMarcado}
+              disabled={marcando}
+            >
+              {marcando ? 'Registrando…' : marcarModal.tipo === 'entrada' ? 'Confirmar entrada' : 'Confirmar salida'}
+            </button>
+            <button className="btn block" style={{ marginTop: 8 }} onClick={() => setMarcarModal(null)}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}

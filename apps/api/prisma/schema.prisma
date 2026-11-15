@@ -398,16 +398,22 @@ model Turno {
 }
 
 model Asistencia {
-  id        String    @id @default(cuid())
-  tenantId  String
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  fecha     String
-  entradaEn DateTime?
-  salidaEn  DateTime?
-  horas     Float?
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  fecha       String
+  entradaEn   DateTime?
+  salidaEn    DateTime?
+  horas       Float?
+  latEntrada  Float?
+  lonEntrada  Float?
+  fotoEntrada String?
+  latSalida   Float?
+  lonSalida   Float?
+  fotoSalida  String?
+  createdAt   DateTime  @default(now())
 
   @@unique([tenantId, userId, fecha])
 }
@@ -653,5 +659,16 @@ model Encuesta {
   pedido    Pedido   @relation(fields: [pedidoId], references: [id])
   estrellas Int
   comentario String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  userId    String?
+  userName  String?
+  accion    String
+  entidad   String
+  detalle   Json?
   createdAt DateTime @default(now())
 }

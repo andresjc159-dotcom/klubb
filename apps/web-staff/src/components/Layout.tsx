@@ -12,6 +12,8 @@ import {
   CalendarDays,
   ChefHat,
   ClipboardList,
+  History,
+  Calculator,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -67,10 +69,21 @@ export default function Layout() {
 
   const [nivelUp, setNivelUp] = useState<any>(null);
   const [config, setConfig] = useState<any>(null);
+  const [alertas, setAlertas] = useState<any>(null);
 
   useEffect(() => {
     api('/local/config').then(setConfig).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (role !== 'ADMIN' && role !== 'MASTER') return;
+    const cargarAlertas = () => {
+      api<any>('/productos/alertas').then(setAlertas).catch(() => {});
+    };
+    cargarAlertas();
+    const id = setInterval(cargarAlertas, 60000);
+    return () => clearInterval(id);
+  }, [role]);
 
   useEffect(() => {
     if (!config?.colorPrimario) return;
@@ -108,6 +121,8 @@ export default function Layout() {
     { to: '/bodega', label: 'Bodega', Icon: Warehouse, show: operaLocal },
     { to: '/turnos', label: 'Turnos', Icon: CalendarClock, show: operaLocal },
     { to: '/nomina', label: 'Nómina', Icon: Banknote, show: operaLocal },
+    { to: '/contabilidad', label: 'Contabilidad', Icon: Calculator, show: operaLocal },
+    { to: '/auditoria', label: 'Auditoría', Icon: History, show: operaLocal },
     { to: '/encuestas', label: 'Encuestas', Icon: Star, show: operaLocal },
     { to: '/kds', label: 'Pedidos (KDS)', Icon: Martini, show: operaLocal || isBarra },
     { to: '/caja', label: 'Caja', Icon: Wallet, show: operaLocal || isCajero },
@@ -150,6 +165,26 @@ export default function Layout() {
             >
               <l.Icon size={18} className="ico" />
               {l.label}
+              {l.to === '/productos' && alertas?.total > 0 && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'var(--accent)',
+                    color: '#1a1204',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 99,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 5px',
+                  }}
+                >
+                  {alertas.total}
+                </span>
+              )}
             </NavLink>
           ))}
         <div className="footer">
@@ -177,6 +212,32 @@ export default function Layout() {
         </div>
       </aside>
       <main className="main">
+        {alertas && alertas.total > 0 && (
+          <div
+            style={{
+              margin: '0 0 14px',
+              padding: '10px 14px',
+              background: 'rgba(245,179,1,.1)',
+              border: '1px solid rgba(245,179,1,.35)',
+              borderRadius: 12,
+              fontSize: 13,
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span>
+              <b>Alerta de inventario:</b>{' '}
+              {alertas.agotados?.length > 0 && `${alertas.agotados.length} agotado(s)`}
+              {alertas.agotados?.length > 0 && alertas.bajoMinimo?.length > 0 && ' · '}
+              {alertas.bajoMinimo?.length > 0 && `${alertas.bajoMinimo.length} bajo mínimo`}
+              {'. '}
+              {alertas.agotados?.slice(0, 3).map((p: any) => p.nombre).join(', ')}
+              {alertas.bajoMinimo?.slice(0, 3).map((p: any) => `${p.nombre} (${p.stock}/${p.stockMinimo})`).join(', ')}
+            </span>
+          </div>
+        )}
         <Outlet />
       </main>
 

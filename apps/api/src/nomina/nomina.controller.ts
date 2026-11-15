@@ -9,9 +9,14 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Roles } from '../common/roles.decorator';
@@ -83,20 +88,38 @@ export class NominaController {
 
   @Roles(Role.ADMIN, Role.MASTER, Role.MESERO)
   @Post('asistencia/entrada')
-  async marcarEntrada(@Req() req: any) {
+  async marcarEntrada(
+    @Req() req: any,
+    @Body() body: { lat?: number; lon?: number; foto?: string },
+  ) {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
     const fecha = new Date().toISOString().slice(0, 10);
     return this.prisma.asistencia.upsert({
       where: { tenantId_userId_fecha: { tenantId, userId: req.user.userId, fecha } },
-      update: {},
-      create: { tenantId, userId: req.user.userId, fecha, entradaEn: new Date() },
+      update: {
+        latEntrada: body.lat,
+        lonEntrada: body.lon,
+        fotoEntrada: body.foto,
+      },
+      create: {
+        tenantId,
+        userId: req.user.userId,
+        fecha,
+        entradaEn: new Date(),
+        latEntrada: body.lat,
+        lonEntrada: body.lon,
+        fotoEntrada: body.foto,
+      },
     });
   }
 
   @Roles(Role.ADMIN, Role.MASTER, Role.MESERO)
   @Post('asistencia/salida')
-  async marcarSalida(@Req() req: any) {
+  async marcarSalida(
+    @Req() req: any,
+    @Body() body: { lat?: number; lon?: number; foto?: string },
+  ) {
     const tenantId = tenantEfectivo(req.user);
     if (!tenantId) throw new BadRequestException('Sin local asignado');
     const fecha = new Date().toISOString().slice(0, 10);
@@ -110,8 +133,32 @@ export class NominaController {
       : 0;
     return this.prisma.asistencia.update({
       where: { id: asistencia.id },
-      data: { salidaEn, horas },
+      data: {
+        salidaEn,
+        horas,
+        latSalida: body.lat,
+        lonSalida: body.lon,
+        fotoSalida: body.foto,
+      },
     });
+  }
+
+  @Roles(Role.ADMIN, Role.MASTER, Role.MESERO)
+  @Post('asistencia/foto')
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: diskStorage({
+        destination: join(process.cwd(), 'uploads'),
+        filename: (_req, file, cb) => {
+          const unique = `asist-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+          cb(null, unique);
+        },
+      }),
+    }),
+  )
+  async subirFotoAsistencia(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('Archivo no recibido');
+    return { url: `/uploads/${file.filename}` };
   }
 
   // ---------- Conceptos ----------

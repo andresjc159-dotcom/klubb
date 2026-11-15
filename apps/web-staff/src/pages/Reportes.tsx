@@ -75,6 +75,55 @@ export default function Reportes() {
     URL.revokeObjectURL(url);
   }
 
+  function descargarExcel() {
+    if (!data) return;
+    const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cell = (v: any, tipo: 'String' | 'Number' = 'String') =>
+      `<Cell><Data ss:Type="${tipo}">${esc(String(v))}</Data></Cell>`;
+    const row = (vals: any[]) => `<Row>${vals.map((v) => cell(v)).join('')}</Row>`;
+
+    const filas: any[][] = [];
+    filas.push(['Reporte KLUBB', `${data.rango.desde} a ${data.rango.hasta}`]);
+    filas.push([]);
+    filas.push(['Ventas totales', data.ventas.total]);
+    filas.push(['Pedidos', data.ventas.pedidos]);
+    filas.push(['Ticket promedio', data.ventas.ticketPromedio]);
+    filas.push(['Ganancia', data.margen.ganancia]);
+    filas.push(['Margen %', data.margen.porcentaje]);
+    filas.push([]);
+    filas.push(['Top productos', '', '']);
+    filas.push(['Producto', 'Cantidad', 'Total']);
+    data.topProductos.forEach((p: any) => filas.push([p.nombre, p.cantidad, p.total]));
+    filas.push([]);
+    filas.push(['Ventas por día', '', '']);
+    filas.push(['Fecha', 'Total', 'Pedidos']);
+    data.ventasPorDia.forEach((d: any) => filas.push([d.fecha, d.total, d.pedidos]));
+    filas.push([]);
+    filas.push(['Ventas por hora', '', '']);
+    filas.push(['Hora', 'Total', '']);
+    data.ventasPorHora.forEach((h: any) => filas.push([h.hora, h.total, '']));
+    filas.push([]);
+    filas.push(['Por mesero', '', '']);
+    filas.push(['Mesero', 'Total', 'Pedidos']);
+    data.ventasPorMesero.forEach((m: any) => filas.push([m.nombre, m.total, m.pedidos]));
+
+    const xml =
+      `<?xml version="1.0"?>\n` +
+      `<?mso-application progid="Excel.Sheet"?>\n` +
+      `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">` +
+      `<Worksheet ss:Name="Reporte"><Table>` +
+      filas.map((r) => row(r)).join('') +
+      `</Table></Worksheet></Workbook>`;
+
+    const blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${data.rango.desde}-${data.rango.hasta}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <div className="topbar">
@@ -87,6 +136,7 @@ export default function Reportes() {
           <span className="sub">a</span>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           <button className="btn" onClick={descargarCSV}>Descargar CSV</button>
+          <button className="btn" onClick={descargarExcel}>Descargar Excel</button>
           <button className="btn primary" onClick={cargar} disabled={cargando}>
             {cargando ? 'Cargando…' : 'Actualizar'}
           </button>

@@ -59,6 +59,49 @@ export class CatalogoController {
     });
   }
 
+  @Get('productos/alertas')
+  async alertasStock(@Req() req: any) {
+    const tenantId = tenantEfectivo(req.user);
+    const productos = await this.prisma.producto.findMany({
+      where: { ...(tenantId ? { tenantId } : {}), activo: true },
+      select: { id: true, nombre: true, stock: true, stockMinimo: true, emoji: true },
+    });
+    const agotados = productos.filter((p) => p.stock === 0);
+    const bajoMinimo = productos.filter(
+      (p) => p.stock > 0 && p.stockMinimo > 0 && p.stock <= p.stockMinimo,
+    );
+    return { agotados, bajoMinimo, total: agotados.length + bajoMinimo.length };
+  }
+
+  @Get('productos/costos')
+  async costos(@Req() req: any) {
+    const tenantId = tenantEfectivo(req.user);
+    const productos = await this.prisma.producto.findMany({
+      where: { ...(tenantId ? { tenantId } : {}), activo: true },
+      include: {
+        categoria: true,
+        receta: { include: { insumo: true } },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+    return productos.map((p) => {
+      const costoReceta = p.receta.reduce((s, r) => s + r.cantidad * r.insumo.costo, 0);
+      const margen = p.precio - costoReceta;
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        emoji: p.emoji,
+        imagenUrl: p.imagenUrl,
+        precio: p.precio,
+        costoManual: p.costo,
+        costoReceta: Math.round(costoReceta),
+        margen: Math.round(margen),
+        margenPct: p.precio > 0 ? Math.round((margen / p.precio) * 1000) / 10 : 0,
+        insumos: p.receta.length,
+      };
+    });
+  }
+
   @Get('productos/vendidos-por-dia')
   async vendidosPorDia(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);

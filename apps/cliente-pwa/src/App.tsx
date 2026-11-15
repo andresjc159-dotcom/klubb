@@ -10,6 +10,7 @@ import {
   User,
   UserPlus,
 } from 'lucide-react';
+import { useI18n } from './i18n';
 
 interface Producto {
   id: string;
@@ -76,6 +77,32 @@ function BrandLogo({ logo, nombre }: { logo?: string; nombre: string }) {
   );
 }
 
+function LangToggle({ lang, setLang }: { lang: string; setLang: (l: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 8 }}>
+      {['ES', 'EN'].map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => setLang(l.toLowerCase())}
+          style={{
+            background: lang === l.toLowerCase() ? 'var(--accent)' : 'rgba(255,255,255,.08)',
+            color: lang === l.toLowerCase() ? '#1a1204' : 'var(--text)',
+            border: 'none',
+            borderRadius: 8,
+            padding: '4px 10px',
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const METODO_LABEL: Record<string, string> = {
   EFECTIVO: 'Efectivo',
   TARJETA: 'Tarjeta',
@@ -126,17 +153,17 @@ function useMenu() {
 
   useEffect(() => {
     if (!qr) {
-      setError('Escanea el QR de tu mesa para comenzar.');
+      setError('scan.qr');
       return;
     }
     fetch(`/api/public/menu?qr=${encodeURIComponent(qr)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data) return setError('Mesa no encontrada');
+        if (!data) return setError('mesa.noEncontrada');
         if (data.abierto === false) return setCerrado({ mensaje: data.mensaje, nombre: data.tenant?.nombre, logoUrl: data.tenant?.logoUrl, colorPrimario: data.tenant?.colorPrimario, colorMarca: data.tenant?.colorMarca });
         setMenu(data);
       })
-      .catch(() => setError('No se pudo cargar el menú'));
+      .catch(() => setError('menu.error'));
   }, [qr]);
 
   return { qr, menu, cerrado, error };
@@ -144,6 +171,7 @@ function useMenu() {
 
 export default function App() {
   const { qr, menu, cerrado, error } = useMenu();
+  const { t, lang, setLang } = useI18n();
 
   useEffect(() => {
     const color = menu?.tenant?.colorPrimario || cerrado?.colorPrimario;
@@ -252,8 +280,8 @@ export default function App() {
       setEstado(d.estado);
       if (d.estado === 'ENTREGADO') setEncuestaModal(true);
       if ((d.estado === 'LISTO' || d.estado === 'ENTREGADO') && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('KLUBB — ¡Tu pedido está listo!', {
-          body: `Estado: ${d.estado === 'LISTO' ? 'Listo para entregar' : 'Entregado'}`,
+        new Notification(t('notif.listo.titulo'), {
+          body: d.estado === 'LISTO' ? t('notif.listo') : t('notif.entregado'),
         });
       }
     });
@@ -269,7 +297,7 @@ export default function App() {
     socket.on('pedido:pagado', () => {
       setPedidoActivo(null);
       setEstado('');
-      setAviso('¡Pago recibido! Gracias por tu visita.');
+      setAviso(t('pago.recibido'));
       setTimeout(() => setAviso(''), 3000);
     });
     socket.on('mesa:liberada', () => {
@@ -340,7 +368,7 @@ export default function App() {
       body: JSON.stringify({ mesaId: menu.mesa.id, codigo: codigo.trim(), alias: nombreAlias }),
     });
     const data = await res.json();
-    if (!res.ok) return alert(data.message || 'Código incorrecto');
+    if (!res.ok) return alert(data.message || t('codigo.incorrecto'));
     const m: Miembro = { miembroId: data.miembroId, sesionId: data.sesionId, alias: nombreAlias, token: data.token };
     localStorage.setItem(LS(menu.mesa.id), JSON.stringify(m));
     setMiembro(m);
@@ -350,14 +378,14 @@ export default function App() {
 
   async function loginCliente() {
     setAuthErr('');
-    if (!tel.trim() || !pass || !menu) return setAuthErr('Completa todos los campos');
+    if (!tel.trim() || !pass || !menu) return setAuthErr(t('completa.campos'));
     const res = await fetch('/api/public/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mesaId: menu.mesa.id, telefono: tel.trim(), password: pass }),
     });
     const data = await res.json();
-    if (!res.ok) return setAuthErr(data.message || 'Error al iniciar sesión');
+    if (!res.ok) return setAuthErr(data.message || t('error.login'));
     localStorage.setItem('klubb_cliente', JSON.stringify(data));
     localStorage.setItem('klubb_cliente_token', data.token);
     setCliente(data);
@@ -369,14 +397,14 @@ export default function App() {
 
   async function registrarCliente() {
     setAuthErr('');
-    if (!nom.trim() || !tel.trim() || !pass || !menu) return setAuthErr('Completa todos los campos');
+    if (!nom.trim() || !tel.trim() || !pass || !menu) return setAuthErr(t('completa.campos'));
     const res = await fetch('/api/public/auth/registro', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mesaId: menu.mesa.id, nombre: nom.trim(), telefono: tel.trim(), password: pass }),
     });
     const data = await res.json();
-    if (!res.ok) return setAuthErr(data.message || 'Error al registrarte');
+    if (!res.ok) return setAuthErr(data.message || t('error.registro'));
     localStorage.setItem('klubb_cliente', JSON.stringify(data));
     localStorage.setItem('klubb_cliente_token', data.token);
     setCliente(data);
@@ -433,10 +461,10 @@ export default function App() {
     const data = await res.json();
     if (res.status === 401) {
       limpiarSesion();
-      alert('Tu sesión expiró. Únete de nuevo a la mesa para pedir.');
+      alert(t('sesion.expiro'));
       return;
     }
-    if (!res.ok) return alert(data.message || 'Error al procesar');
+    if (!res.ok) return alert(data.message || t('error.procesar'));
     setResultado({ codigo: data.codigo, pin: data.pin });
     setPedidoActivo({ id: data.id, codigo: data.codigo });
     setEstado('RECIBIDO');
@@ -450,7 +478,7 @@ export default function App() {
 
   async function cancelarPedido() {
     if (!pedidoActivo || !miembro) return;
-    if (!window.confirm('¿Cancelar tu pedido?')) return;
+    if (!window.confirm(t('cancelar.pedido.confirm'))) return;
     await fetch(`/api/public/pedido/${pedidoActivo.id}/cancelar`, {
       method: 'POST',
       headers: miembro.token ? { Authorization: `Bearer ${miembro.token}` } : {},
@@ -469,7 +497,7 @@ export default function App() {
         body: JSON.stringify({ pedidoId: pedidoActivo.id, estrellas, comentario }),
       });
       setEncuestaModal(false);
-      setAviso('¡Gracias por tu calificación!');
+      setAviso(t('gracias.calificacion'));
       setTimeout(() => setAviso(''), 2500);
     } catch {
       /* ignore */
@@ -499,7 +527,7 @@ export default function App() {
       method: 'POST',
       headers: miembro.token ? { Authorization: `Bearer ${miembro.token}` } : {},
     });
-    setAviso('El mesero fue notificado');
+    setAviso(t('mesero.notificado'));
     setTimeout(() => setAviso(''), 2500);
   }
 
@@ -509,7 +537,7 @@ export default function App() {
       method: 'POST',
       headers: miembro.token ? { Authorization: `Bearer ${miembro.token}` } : {},
     });
-    setAviso('El mesero fue notificado para cobrar');
+    setAviso(t('mesero.cobrar'));
     setTimeout(() => setAviso(''), 2500);
   }
 
@@ -521,8 +549,8 @@ export default function App() {
           {cerrado.logoUrl && (
             <img src={cerrado.logoUrl} alt="logo" style={{ width: 120, height: 120, borderRadius: 24, objectFit: 'cover', marginBottom: 14 }} />
           )}
-          <h2 style={{ marginBottom: 8, color: 'var(--marca-letra)' }}>{cerrado.nombre || 'Local'}</h2>
-          <div className="subtitle" style={{ color: '#8b95a6' }}>{cerrado.mensaje}</div>
+          <h2 style={{ marginBottom: 8, color: 'var(--marca-letra)' }}>{cerrado.nombre || t('local')}</h2>
+          <div className="subtitle" style={{ color: '#8b95a6' }}>{t('local.cerrado.mensaje')}</div>
         </div>
       </div>
     );
@@ -533,9 +561,9 @@ export default function App() {
       <div className="app">
         <div className="centered">
           <h2 style={{ marginBottom: 8 }}>KLUBB</h2>
-          <div className="subtitle" style={{ color: '#8b95a6' }}>{error || 'Cargando…'}</div>
+          <div className="subtitle" style={{ color: '#8b95a6' }}>{error ? t(error) : t('cargando')}</div>
           {!qr && (
-            <a className="btn primary block" style={{ marginTop: 16 }} href="/?qr=la-noche-m1">Ver demo (Mesa 1)</a>
+            <a className="btn primary block" style={{ marginTop: 16 }} href="/?qr=la-noche-m1">{t('ver.demo')}</a>
           )}
         </div>
       </div>
@@ -547,10 +575,10 @@ export default function App() {
       <div className="app">
         <div className="centered">
           <div style={{ fontSize: 56 }}>👋</div>
-          <h2 style={{ marginTop: 8 }}>¡Gracias por tu visita!</h2>
-          <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>Esperamos verte pronto.</div>
+          <h2 style={{ marginTop: 8 }}>{t('gracias')}</h2>
+          <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>{t('esperamos.verte')}</div>
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => { setDespedida(false); setJoinStep('landing'); }}>
-            Entendido
+            {t('entendido')}
           </button>
         </div>
       </div>
@@ -562,10 +590,10 @@ export default function App() {
       <div className="app">
         <div className="centered">
           <div style={{ fontSize: 56 }}>🔒</div>
-          <h2 style={{ marginTop: 8 }}>El local ha cerrado</h2>
-          <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>Vuelve pronto. ¡Te esperamos!</div>
+          <h2 style={{ marginTop: 8 }}>{t('local.cerrado')}</h2>
+          <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>{t('vuelve.pronto')}</div>
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => { setLocalCerrado(false); setJoinStep('landing'); }}>
-            Entendido
+            {t('entendido')}
           </button>
         </div>
       </div>
@@ -578,15 +606,16 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
-            <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> Volver</button>
+            <LangToggle lang={lang} setLang={setLang} />
+            <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> {t('volver')}</button>
             <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
-            <h1>Iniciar sesión</h1>
-            <div className="welcome">Ingresa con tu teléfono y contraseña.</div>
+            <h1>{t('login')}</h1>
+            <div className="welcome">{t('login.sub')}</div>
             <div className="opts">
-              <input value={tel} onChange={(e) => setTel(e.target.value.replace(/\D/g, ''))} inputMode="tel" placeholder="Teléfono" />
-              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Contraseña" />
+              <input value={tel} onChange={(e) => setTel(e.target.value.replace(/\D/g, ''))} inputMode="tel" placeholder={t('telefono')} />
+              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={t('contrasena')} />
               {authErr && <div className="pill bad" style={{ alignSelf: 'center' }}>{authErr}</div>}
-              <button className="btn primary block" onClick={loginCliente}><LogIn size={18} /> Entrar</button>
+              <button className="btn primary block" onClick={loginCliente}><LogIn size={18} /> {t('entrar')}</button>
             </div>
           </div>
         </div>
@@ -597,16 +626,17 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
-            <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> Volver</button>
+            <LangToggle lang={lang} setLang={setLang} />
+            <button className="back" onClick={() => setAuthStep(null)}><ChevronLeft size={16} /> {t('volver')}</button>
             <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
-            <h1>Crear cuenta</h1>
-            <div className="welcome">Nombre, teléfono y contraseña. ¡Y listo!</div>
+            <h1>{t('registro')}</h1>
+            <div className="welcome">{t('registro.sub')}</div>
             <div className="opts">
-              <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nombre" />
-              <input value={tel} onChange={(e) => setTel(e.target.value.replace(/\D/g, ''))} inputMode="tel" placeholder="Teléfono" />
-              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Contraseña" />
+              <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder={t('nombre')} />
+              <input value={tel} onChange={(e) => setTel(e.target.value.replace(/\D/g, ''))} inputMode="tel" placeholder={t('telefono')} />
+              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={t('contrasena')} />
               {authErr && <div className="pill bad" style={{ alignSelf: 'center' }}>{authErr}</div>}
-              <button className="btn primary block" onClick={registrarCliente}><UserPlus size={18} /> Crear cuenta</button>
+              <button className="btn primary block" onClick={registrarCliente}><UserPlus size={18} /> {t('registro')}</button>
             </div>
           </div>
         </div>
@@ -617,6 +647,7 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
+            <LangToggle lang={lang} setLang={setLang} />
             <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
             <h1 style={{ color: 'var(--marca-letra)' }}>{menu.tenant.nombre}</h1>
             <div className="mesa-pill">
@@ -625,18 +656,18 @@ export default function App() {
             <div className="welcome">{menu.tenant.mensajeBienvenida}</div>
             <div className="opts">
               <button className="btn primary block" onClick={() => { setJoinCtx('crear'); setJoinStep('alias'); }}>
-                <User size={18} /> Entrar como invitado <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
+                <User size={18} /> {t('invitado')} <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
               </button>
               <button className="btn block" onClick={() => setAuthStep('login')}>
-                <LogIn size={18} /> Iniciar sesión
+                <LogIn size={18} /> {t('login')}
               </button>
               <button className="btn block" onClick={() => setAuthStep('registro')}>
-                <UserPlus size={18} /> Crear cuenta
+                <UserPlus size={18} /> {t('registro')}
               </button>
             </div>
-            <div className="divider">serás el anfitrión</div>
+            <div className="divider">{t('anfitrion')}</div>
             <div className="welcome" style={{ fontSize: 12 }}>
-              Recibirás un código de 4 dígitos para invitar a los demás a la mesa.
+              {t('anfitrion.sub')}
             </div>
           </div>
         </div>
@@ -647,9 +678,10 @@ export default function App() {
       return (
         <div className="app">
           <div className="landing">
+            <LangToggle lang={lang} setLang={setLang} />
             <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
-            <h1>Unirse a {menu.mesa.nombre}</h1>
-            <div className="welcome">Esta mesa ya está en curso. Pide el código al anfitrión.</div>
+            <h1>{t('unirse.mesa', { mesa: menu.mesa.nombre })}</h1>
+            <div className="welcome">{t('unirse.sub')}</div>
             <div className="opts">
               <input
                 value={codigo}
@@ -666,7 +698,7 @@ export default function App() {
                   setJoinStep('alias');
                 }}
               >
-                <KeyRound size={18} /> Continuar
+                <KeyRound size={18} /> {t('continuar')}
               </button>
             </div>
           </div>
@@ -678,16 +710,17 @@ export default function App() {
     return (
       <div className="app">
         <div className="landing">
+          <LangToggle lang={lang} setLang={setLang} />
           <button className="back" onClick={() => setJoinStep(joinCtx === 'crear' ? 'landing' : 'codigo')}>
-            <ChevronLeft size={16} /> Volver
+            <ChevronLeft size={16} /> {t('volver')}
           </button>
           <BrandLogo logo={menu.tenant.logoUrl} nombre={menu.tenant.nombre} />
-          <h1>{joinCtx === 'crear' ? '¿Cómo te llamas?' : 'Tu nombre en la mesa'}</h1>
-          <div className="welcome">Así te identificarán los demás en la mesa.</div>
+          <h1>{t(joinCtx === 'crear' ? 'como.llamas' : 'nombre.mesa')}</h1>
+          <div className="welcome">{t('nombre.sub')}</div>
           <div className="opts">
-            <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Ej: Ana" autoFocus />
+            <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder={t('ej.ana')} autoFocus />
             <button className="btn primary block" onClick={joinCtx === 'crear' ? crearSesion : unirse}>
-              <ArrowRight size={18} /> Entrar a la mesa
+              <ArrowRight size={18} /> {t('entrar.mesa')}
             </button>
           </div>
         </div>
@@ -716,13 +749,19 @@ export default function App() {
           </div>
           {miembro.codigo && (
             <button className="code-badge" onClick={() => setVerCodigo(true)}>
-              Código {miembro.codigo}
+              {t('codigo.mesa', { codigo: miembro.codigo })}
             </button>
           )}
+          <button
+            onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+            style={{ background: 'rgba(255,255,255,.08)', border: 'none', borderRadius: 8, padding: '4px 8px', fontSize: 12, fontWeight: 800, color: 'var(--text)', cursor: 'pointer' }}
+          >
+            {lang === 'es' ? 'EN' : 'ES'}
+          </button>
         </div>
         <div style={{ position: 'relative', zIndex: 1, marginTop: 10, display: 'flex', gap: 8 }}>
-          <span className="pill purple">Tú: {miembro.alias}</span>
-          <button className="btn sm outline" onClick={llamarMesero}>Llamar mesero</button>
+          <span className="pill purple">{t('tu', { alias: miembro.alias })}</span>
+          <button className="btn sm outline" onClick={llamarMesero}>{t('llamar.mesero')}</button>
         </div>
       </div>
 
@@ -738,7 +777,7 @@ export default function App() {
             <div className="banner">
               <Sparkles size={22} color="#f5b301" className="ico" />
               <div className="txt" style={{ fontSize: 13 }}>
-                <b>Happy Hour</b> · 2x1 en cocteles hasta las 8pm
+                <b>{t('happy.hour')}</b> · {t('happy.hour.sub')}
               </div>
             </div>
             {menu.configPuntos?.habilitado && cliente && (() => {
@@ -748,13 +787,13 @@ export default function App() {
                   <div className="pinfo">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                       <div>
-                        <div className="subtitle">Nivel actual</div>
+                        <div className="subtitle">{t('nivel.actual')}</div>
                         <div className="pname" style={{ color: '#f5b301' }}>⭐ {prog.nivel}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div className="subtitle">{prog.puntos} puntos</div>
+                        <div className="subtitle">{t('puntos', { n: prog.puntos })}</div>
                         {prog.siguiente && (
-                          <div className="subtitle">Te faltan {prog.faltan} para {prog.siguiente}</div>
+                          <div className="subtitle">{t('te.faltan', { n: prog.faltan, nivel: prog.siguiente })}</div>
                         )}
                       </div>
                     </div>
@@ -767,7 +806,7 @@ export default function App() {
             })()}
             <div className="chips">
               <button className={`chip ${catId === '__promo__' ? 'on' : ''}`} onClick={() => setCatId('__promo__')}>
-                <span className="ico">🎁</span>Promociones
+                <span className="ico">🎁</span>{t('promociones')}
               </button>
               {menu.categorias.map((c) => (
                 <button key={c.id} className={`chip ${c.id === cat?.id ? 'on' : ''}`} onClick={() => setCatId(c.id)}>
@@ -778,7 +817,7 @@ export default function App() {
             {catId === '__promo__' ? (
               <div className="carta">
                 {(menu.promociones || []).length === 0 && (
-                  <div className="cdesc">No hay promociones activas.</div>
+                  <div className="cdesc">{t('sin.promos')}</div>
                 )}
                 {(menu.promociones || []).map((promo) => (
                   <div key={promo.id} style={{ marginBottom: 14 }}>
@@ -841,45 +880,45 @@ export default function App() {
 
         {tab === 'cuenta' && (
           <>
-            <div className="section">Mi pedido</div>
+            <div className="section">{t('mi.pedido')}</div>
             {pedidoActivo ? (
               <div className="pcard" style={{ borderColor: 'var(--accent)' }}>
                 <div className="pinfo">
-                  <div className="pname">Tu pedido {pedidoActivo.codigo}</div>
+                  <div className="pname">{t('tu.pedido', { codigo: pedidoActivo.codigo })}</div>
                   <div className="pdesc" style={{ marginTop: 4 }}>
                     <span className={`pill ${ESTADO_PILL[estado] || 'warn'}`}>
-                      {ESTADO_LABEL[estado] || 'Recibido'}
+                      {t(estado ? `estado.${estado}` : 'estado.RECIBIDO')}
                     </span>
                   </div>
                 </div>
                 {(estado === 'RECIBIDO' || estado === '') && (
-                  <button className="btn sm danger" onClick={cancelarPedido}>Cancelar</button>
+                  <button className="btn sm danger" onClick={cancelarPedido}>{t('cancelar')}</button>
                 )}
               </div>
             ) : (
-              <div className="subtitle">Aún no has pedido nada.</div>
+              <div className="subtitle">{t('sin.pedir')}</div>
             )}
             {items.length > 0 && (
               <button className="btn primary block" style={{ marginTop: 12 }} onClick={() => setCheckout(true)}>
-                Revisar carrito ({items.length} art.)
+                {t('revisar.carrito', { n: items.length })}
               </button>
             )}
 
-            <div className="section" style={{ marginTop: 22 }}>La mesa</div>
+            <div className="section" style={{ marginTop: 22 }}>{t('la.mesa')}</div>
             <div className="banner" style={{ marginTop: 0 }}>
-              Total de la cuenta: <b>${totalMesa.toLocaleString('es-CO')}</b>
+              {t('total.cuenta')} <b>${totalMesa.toLocaleString('es-CO')}</b>
             </div>
             <button className="btn primary block" style={{ marginBottom: 14 }} onClick={solicitarPago}>
-              💳 Pagar / pedir cuenta
+              💳 {t('pagar.pedir')}
             </button>
             {(sesion?.miembros || []).map((m: any) => {
-              const t = m.pedidos?.reduce((s: number, p: any) => s + p.total, 0) || 0;
+              const tot = m.pedidos?.reduce((s: number, p: any) => s + p.total, 0) || 0;
               return (
                 <div key={m.id} style={{ marginBottom: 14 }}>
                   <div className="member-row">
                     <span className="dot" style={{ background: m.id === miembro.miembroId ? 'var(--accent)' : 'var(--muted)' }} />
-                    <b style={{ flex: 1 }}>{m.alias}{m.id === miembro.miembroId ? ' (tú)' : ''}</b>
-                    <span style={{ fontWeight: 700 }}>${t.toLocaleString('es-CO')}</span>
+                    <b style={{ flex: 1 }}>{m.alias}{m.id === miembro.miembroId ? ` ${t('tu2')}` : ''}</b>
+                    <span style={{ fontWeight: 700 }}>${tot.toLocaleString('es-CO')}</span>
                   </div>
                   {(m.pedidos || []).map((p: any) => (
                     <div key={p.id} style={{ fontSize: 13, color: '#8b95a6', paddingLeft: 19, marginBottom: 4 }}>
@@ -895,20 +934,20 @@ export default function App() {
 
         {tab === 'musica' && (
           <>
-            <div className="section">Pedir una canción</div>
+            <div className="section">{t('pedir.cancion')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Artista — Canción" />
-              <button className="btn primary" onClick={pedirCancion}>Pedir</button>
+              <input value={tema} onChange={(e) => setTema(e.target.value)} placeholder={t('artista.cancion')} />
+              <button className="btn primary" onClick={pedirCancion}>{t('pedir')}</button>
             </div>
             <div style={{ marginTop: 12 }}>
               {canciones.slice(0, 6).map((c) => (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', fontSize: 14, borderBottom: '1px solid var(--line)' }}>
                   <span style={{ flex: 1 }}>{c.tema}</span>
-                  {c.estado === 'SONANDO' && <span className="pill ok">Sonando</span>}
-                  <button className="btn sm" onClick={() => votarCancion(c.id)}>Votar ({c.votos})</button>
+                  {c.estado === 'SONANDO' && <span className="pill ok">{t('sonando')}</span>}
+                  <button className="btn sm" onClick={() => votarCancion(c.id)}>{t('votar', { n: c.votos })}</button>
                 </div>
               ))}
-              {canciones.length === 0 && <div className="subtitle">No hay canciones en cola.</div>}
+              {canciones.length === 0 && <div className="subtitle">{t('sin.canciones')}</div>}
             </div>
           </>
         )}
@@ -918,53 +957,53 @@ export default function App() {
       {items.length > 0 && tab === 'menu' && (
         <div className="cartbar">
           <div className="inner">
-            <span style={{ fontSize: 14 }}><b>{items.length} art.</b> · ${total.toLocaleString('es-CO')}</span>
-            <button className="btn primary" onClick={() => setCheckout(true)}>Enviar pedido</button>
+            <span style={{ fontSize: 14 }}><b>{items.length} {t('art')}</b> · ${total.toLocaleString('es-CO')}</span>
+            <button className="btn primary" onClick={() => setCheckout(true)}>{t('enviar.pedido')}</button>
           </div>
         </div>
       )}
 
       <div className="tabbar">
-        <button className={`tab ${tab === 'menu' ? 'on' : ''}`} onClick={() => setTab('menu')}><span className="ico">🍽️</span>Menú</button>
-        <button className={`tab ${tab === 'cuenta' ? 'on' : ''}`} onClick={() => setTab('cuenta')}><span className="ico">🧾</span>Cuenta</button>
-        <button className={`tab ${tab === 'musica' ? 'on' : ''}`} onClick={() => setTab('musica')}><span className="ico">🎵</span>Música</button>
+        <button className={`tab ${tab === 'menu' ? 'on' : ''}`} onClick={() => setTab('menu')}><span className="ico">🍽️</span>{t('tab.menu')}</button>
+        <button className={`tab ${tab === 'cuenta' ? 'on' : ''}`} onClick={() => setTab('cuenta')}><span className="ico">🧾</span>{t('tab.cuenta')}</button>
+        <button className={`tab ${tab === 'musica' ? 'on' : ''}`} onClick={() => setTab('musica')}><span className="ico">🎵</span>{t('tab.musica')}</button>
       </div>
 
       {checkout && (
         <div className="modal-bg" onClick={() => setCheckout(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Confirmar pedido</h2>
+            <h2>{t('confirmar.pedido')}</h2>
             {items.map((i) => (
               <div key={i.productoId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '5px 0' }}>
                 <span>{i.cantidad}x {i.nombre}</span><span>${(i.precio * i.cantidad).toLocaleString('es-CO')}</span>
               </div>
             ))}
             <div style={{ borderTop: '1px solid var(--line)', margin: '12px 0' }} />
-            <label>Modo de entrega</label>
+            <label>{t('modo.entrega')}</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className={`btn sm ${modo === 'MESA' ? 'primary' : ''}`} onClick={() => setModo('MESA')}>A la mesa</button>
-              <button className={`btn sm ${modo === 'PICKUP' ? 'primary' : ''}`} onClick={() => setModo('PICKUP')}>Pick-up</button>
+              <button className={`btn sm ${modo === 'MESA' ? 'primary' : ''}`} onClick={() => setModo('MESA')}>{t('a.la.mesa')}</button>
+              <button className={`btn sm ${modo === 'PICKUP' ? 'primary' : ''}`} onClick={() => setModo('PICKUP')}>{t('pickup')}</button>
             </div>
-            <label>Propina</label>
+            <label>{t('propina')}</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              {[0, 10, 15, 20].map((t) => (
-                <button key={t} className={`btn sm ${propina === t ? 'primary' : ''}`} onClick={() => setPropina(t)}>
-                  {t === 0 ? 'Nada' : `${t}%`}
+              {[0, 10, 15, 20].map((tip) => (
+                <button key={tip} className={`btn sm ${propina === tip ? 'primary' : ''}`} onClick={() => setPropina(tip)}>
+                  {tip === 0 ? t('nada') : `${tip}%`}
                 </button>
               ))}
             </div>
-            <label>Medio de pago</label>
+            <label>{t('medio.pago')}</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {(menu.metodosPago || ['EFECTIVO', 'TARJETA', 'NEQUI', 'PSE', 'WOMPI']).map((m) => (
                 <button key={m} className={`btn sm ${metodoPago === m ? 'primary' : ''}`} onClick={() => setMetodoPago(m)}>
-                  {METODO_LABEL[m] || m}
+                  {t(`metodo.${m}`) || m}
                 </button>
               ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0' }}><span>Subtotal</span><span>${subtotal.toLocaleString('es-CO')}</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0' }}><span>Propina</span><span>${totalPropina.toLocaleString('es-CO')}</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17, fontWeight: 700, padding: '8px 0' }}><span>Total</span><span>${total.toLocaleString('es-CO')}</span></div>
-            <button className="btn primary block" onClick={pagar}>Enviar pedido</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0' }}><span>{t('subtotal')}</span><span>${subtotal.toLocaleString('es-CO')}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0' }}><span>{t('propina')}</span><span>${totalPropina.toLocaleString('es-CO')}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17, fontWeight: 700, padding: '8px 0' }}><span>{t('total')}</span><span>${total.toLocaleString('es-CO')}</span></div>
+            <button className="btn primary block" onClick={pagar}>{t('enviar.pedido')}</button>
           </div>
         </div>
       )}
@@ -972,12 +1011,12 @@ export default function App() {
       {resultado && (
         <div className="modal-bg" onClick={() => setResultado(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Pedido enviado</h2>
+            <h2>{t('pedido.enviado')}</h2>
             <div className="pin">{resultado.codigo}</div>
             <div style={{ textAlign: 'center', fontSize: 13, color: '#8b95a6' }}>
-              PIN de entrega: <b style={{ letterSpacing: 3 }}>{resultado.pin}</b>
+              {t('pin.entrega')} <b style={{ letterSpacing: 3 }}>{resultado.pin}</b>
             </div>
-            <button className="btn primary block" style={{ marginTop: 16 }} onClick={() => { setResultado(null); setAvisoPrep(true); }}>Listo</button>
+            <button className="btn primary block" style={{ marginTop: 16 }} onClick={() => { setResultado(null); setAvisoPrep(true); }}>{t('listo')}</button>
           </div>
         </div>
       )}
@@ -985,13 +1024,13 @@ export default function App() {
       {verCodigo && (
         <div className="modal-bg" onClick={() => setVerCodigo(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <h2>Código de la mesa</h2>
+            <h2>{t('codigo.mesa.titulo')}</h2>
             <div className="subtitle" style={{ marginBottom: 14 }}>
-              Comparte este código para que tus amigos se unan a la mesa {menu.mesa.nombre}.
+              {t('codigo.mesa.sub', { mesa: menu.mesa.nombre })}
             </div>
             <div className="pin">{miembro.codigo}</div>
             <button className="btn primary block" style={{ marginTop: 16 }} onClick={() => setVerCodigo(false)}>
-              Entendido
+              {t('entendido')}
             </button>
           </div>
         </div>
@@ -1000,12 +1039,12 @@ export default function App() {
       {avisoPrep && (
         <div className="modal-bg" onClick={() => setAvisoPrep(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <h2>Importante</h2>
+            <h2>{t('importante')}</h2>
             <div className="subtitle" style={{ fontSize: 15, lineHeight: 1.5, marginTop: 6 }}>
-              Una vez tu pedido esté <b style={{ color: 'var(--accent)' }}>en preparación</b>, no podrás cancelarlo.
+              {t('importante.sub')}
             </div>
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => setAvisoPrep(false)}>
-              Entendido
+              {t('entendido')}
             </button>
           </div>
         </div>
@@ -1015,15 +1054,15 @@ export default function App() {
         <div className="modal-bg" onClick={() => setNivelUp(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 8 }}>🎉</div>
-            <h2 style={{ color: 'var(--accent)' }}>¡Subiste de nivel!</h2>
+            <h2 style={{ color: 'var(--accent)' }}>{t('subiste.nivel')}</h2>
             <div className="subtitle" style={{ fontSize: 15, marginTop: 8 }}>
-              Ahora eres <b>{nivelUp.nuevoNivel}</b>
+              {t('ahora.eres', { nivel: nivelUp.nuevoNivel })}
             </div>
             <div className="subtitle" style={{ marginTop: 6, color: '#8b95a6' }}>
-              Tienes {nivelUp.puntos} puntos acumulados
+              {t('tienes.puntos', { n: nivelUp.puntos })}
             </div>
             <button className="btn primary block" style={{ marginTop: 20 }} onClick={() => setNivelUp(null)}>
-              ¡Genial!
+              {t('genial')}
             </button>
           </div>
         </div>
@@ -1032,7 +1071,7 @@ export default function App() {
       {encuestaModal && (
         <div className="modal-bg" onClick={() => setEncuestaModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <h2>¿Cómo estuvo tu experiencia?</h2>
+            <h2>{t('experiencia')}</h2>
             <div style={{ fontSize: 32, margin: '12px 0' }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -1047,11 +1086,11 @@ export default function App() {
             <textarea
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
-              placeholder="Cuéntanos más (opcional)"
+              placeholder={t('cuentanos')}
               style={{ width: '100%', minHeight: 70, marginBottom: 12 }}
             />
-            <button className="btn primary block" onClick={enviarEncuesta}>Enviar</button>
-            <button className="btn block" style={{ marginTop: 8 }} onClick={() => setEncuestaModal(false)}>Ahora no</button>
+            <button className="btn primary block" onClick={enviarEncuesta}>{t('enviar')}</button>
+            <button className="btn block" style={{ marginTop: 8 }} onClick={() => setEncuestaModal(false)}>{t('ahora.no')}</button>
           </div>
         </div>
       )}
@@ -1079,10 +1118,10 @@ export default function App() {
                   <button onClick={() => toggle(productoModal.id, 1)}>+</button>
                 </div>
               ) : (
-                <button className="btn primary" onClick={() => toggle(productoModal.id, 1)}>Agregar</button>
+                <button className="btn primary" onClick={() => toggle(productoModal.id, 1)}>{t('agregar')}</button>
               )}
             </div>
-            <button className="btn block" style={{ marginTop: 14 }} onClick={() => setProductoModal(null)}>Cerrar</button>
+            <button className="btn block" style={{ marginTop: 14 }} onClick={() => setProductoModal(null)}>{t('cerrar')}</button>
           </div>
         </div>
       )}
@@ -1100,16 +1139,16 @@ export default function App() {
             </div>
             <h2 style={{ marginTop: 4 }}>{menu.mesero.nombre}</h2>
             <div className="subtitle" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              ¡Hola! Soy quien tendrá el gusto de atenderlos hoy.
+              {t('bienvenida')}
             </div>
             <div style={{ marginTop: 16, padding: 12, background: 'rgba(245,179,1,.08)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 24 }}>🛎️</span>
               <span className="subtitle" style={{ fontSize: 13, textAlign: 'left' }}>
-                Usa el botón <b style={{ color: 'var(--accent)' }}>Llamar mesero</b> cuando necesites ayuda.
+                {t('bienvenida.sub')}
               </span>
             </div>
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => setBienvenida(false)}>
-              ¡Empecemos!
+              {t('empecemos')}
             </button>
           </div>
         </div>

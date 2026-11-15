@@ -7,6 +7,7 @@ export default function Recetas() {
   const toast = useToast();
   const [productos, setProductos] = useState<any[]>([]);
   const [insumos, setInsumos] = useState<any[]>([]);
+  const [costos, setCostos] = useState<any[]>([]);
   const [selId, setSelId] = useState('');
   const [receta, setReceta] = useState<Array<{ insumoId: string; cantidad: string }>>([]);
   const [nuevoInsumo, setNuevoInsumo] = useState('');
@@ -14,6 +15,7 @@ export default function Recetas() {
 
   const cargarProductos = useCallback(() => {
     api<any[]>('/productos').then(setProductos).catch(console.error);
+    api<any[]>('/productos/costos').then(setCostos).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -30,8 +32,11 @@ export default function Recetas() {
 
   const insumoNombre = (id: string) => insumos.find((i) => i.id === id)?.nombre || '—';
   const insumoUnidad = (id: string) => insumos.find((i) => i.id === id)?.unidad || '';
+  const costoDe = (id: string) => costos.find((c) => c.id === id);
+  const fmt = (n: number) => '$' + (n || 0).toLocaleString('es-CO');
 
   const producto = productos.find((p) => p.id === selId);
+  const costoProducto = selId ? costoDe(selId) : null;
 
   function agregar() {
     if (!nuevoInsumo || !nuevaCant) return;
@@ -78,7 +83,17 @@ export default function Recetas() {
               onClick={() => setSelId(p.id)}
             >
               <div className="emoji-tile">{p.imagenUrl ? <img src={p.imagenUrl} alt="" style={{ width: 40, height: 40, borderRadius: 11, objectFit: 'cover' }} /> : p.emoji || '🍽️'}</div>
-              <div className="body"><div className="title">{p.nombre}</div></div>
+              <div className="body">
+                <div className="title">{p.nombre}</div>
+                <div className="meta">
+                  {(() => {
+                    const c = costoDe(p.id);
+                    return c
+                      ? `Costo receta ${fmt(c.costoReceta)} · margen ${c.margenPct}%`
+                      : 'Sin insumos asignados';
+                  })()}
+                </div>
+              </div>
             </div>
           ))}
           {productos.length === 0 && <div className="sub">Sin productos.</div>}
@@ -90,6 +105,36 @@ export default function Recetas() {
 
           {producto && (
             <>
+              {costoProducto && (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: '12px 14px',
+                    background: 'rgba(245,179,1,.07)',
+                    border: '1px solid rgba(245,179,1,.3)',
+                    borderRadius: 12,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    gap: 8,
+                    fontSize: 13,
+                  }}
+                >
+                  <div>
+                    <div className="sub">Precio</div>
+                    <b>{fmt(costoProducto.precio)}</b>
+                  </div>
+                  <div>
+                    <div className="sub">Costo receta</div>
+                    <b>{fmt(costoProducto.costoReceta)}</b>
+                  </div>
+                  <div>
+                    <div className="sub">Margen</div>
+                    <b style={{ color: costoProducto.margenPct >= 0 ? '#4ade80' : '#f87171' }}>
+                      {fmt(costoProducto.margen)} ({costoProducto.margenPct}%)
+                    </b>
+                  </div>
+                </div>
+              )}
               {receta.length === 0 && (
                 <div className="sub" style={{ marginBottom: 10 }}>Aún no tiene insumos asignados.</div>
               )}
