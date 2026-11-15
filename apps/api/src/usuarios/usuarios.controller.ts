@@ -8,11 +8,16 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
@@ -34,6 +39,7 @@ export class UsuariosController {
         nombre: true,
         email: true,
         telefono: true,
+        fotoUrl: true,
         role: true,
         activo: true,
         tenantId: true,
@@ -149,5 +155,24 @@ export class UsuariosController {
       where: { id },
       data: { activo: false },
     });
+  }
+
+  @Post(':id/foto')
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: diskStorage({
+        destination: join(process.cwd(), 'uploads'),
+        filename: (_req, file, cb) => {
+          const unique = `user-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+          cb(null, unique);
+        },
+      }),
+    }),
+  )
+  async subirFoto(@Param('id') id: string, @UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('Archivo no recibido');
+    const fotoUrl = `/uploads/${file.filename}`;
+    await this.prisma.user.update({ where: { id }, data: { fotoUrl } });
+    return { fotoUrl };
   }
 }

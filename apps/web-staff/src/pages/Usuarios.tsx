@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Plus, Pencil, Trash2, Users, ShieldCheck } from 'lucide-react';
+import { Camera, Plus, Pencil, Trash2, Users, ShieldCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../auth';
 import { useToast } from '../components/Toast';
@@ -99,6 +99,24 @@ export default function Usuarios() {
     return locales.find((l) => l.id === tenantId)?.nombre || tenantId;
   }
 
+  async function subirFoto(id: string, file: File) {
+    const token = localStorage.getItem('klubb_token');
+    const fd = new FormData();
+    fd.append('foto', file);
+    try {
+      const res = await fetch(`/api/usuarios/${id}/foto`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) throw new Error('Error al subir la foto');
+      toast('Foto actualizada', 'ok');
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
   return (
     <div>
       <div className="topbar">
@@ -117,7 +135,13 @@ export default function Usuarios() {
       <div className="card">
         {usuarios.map((u) => (
           <div className="list-item" key={u.id}>
-            <div className="emoji-tile"><ShieldCheck size={18} color={u.role === 'ADMIN' ? '#f5b301' : '#8b95a6'} /></div>
+            <div className="emoji-tile" style={{ overflow: 'hidden' }}>
+              {u.fotoUrl ? (
+                <img src={u.fotoUrl} alt={u.nombre} style={{ width: 40, height: 40, borderRadius: 11, objectFit: 'cover' }} />
+              ) : (
+                <ShieldCheck size={18} color={u.role === 'ADMIN' ? '#f5b301' : '#8b95a6'} />
+              )}
+            </div>
             <div className="body">
               <div className="title">
                 {u.nombre}
@@ -126,6 +150,10 @@ export default function Usuarios() {
               <div className="meta">{u.email} · {ROLE_LABELS[u.role] || u.role}{esMaster ? ` · ${nombreLocal(u.tenantId)}` : ''}</div>
             </div>
             <span className={`pill ${u.activo ? 'ok' : 'mute'}`}>{u.activo ? 'Activo' : 'Inactivo'}</span>
+            <label className="btn sm" style={{ cursor: 'pointer' }} title="Subir foto">
+              <Camera size={13} />
+              <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFoto(u.id, f); e.target.value = ''; }} />
+            </label>
             <button className="btn sm" onClick={() => setForm({ id: u.id, nombre: u.nombre, email: u.email, telefono: u.telefono || '', password: '', role: u.role, tenantId: u.tenantId || '', base: String(u.base ?? 0) })}>
               <Pencil size={13} />
             </button>

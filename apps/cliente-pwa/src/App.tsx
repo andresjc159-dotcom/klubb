@@ -38,6 +38,7 @@ interface Menu {
   mensaje?: string;
   tenant: { id: string; nombre: string; mensajeBienvenida: string; logoUrl?: string };
   mesa: { id: string; nombre: string; zona: string };
+  mesero?: { nombre: string; fotoUrl?: string } | null;
   sesion: null | { id: string; activo: boolean; miembros: { id: string; alias: string }[] };
   metodosPago?: string[];
   categorias: Categoria[];
@@ -142,6 +143,7 @@ export default function App() {
   const [productoModal, setProductoModal] = useState<any>(null);
   const [encuestaModal, setEncuestaModal] = useState(false);
   const [despedida, setDespedida] = useState(false);
+  const [bienvenida, setBienvenida] = useState(false);
   const [estrellas, setEstrellas] = useState(5);
   const [comentario, setComentario] = useState('');
   const [verCodigo, setVerCodigo] = useState(false);
@@ -183,6 +185,11 @@ export default function App() {
     else setJoinStep('codigo');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menu]);
+
+  useEffect(() => {
+    if (miembro && menu?.mesero) setBienvenida(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miembro, menu]);
 
   useEffect(() => {
     if (menu && menu.categorias.length && !catId) setCatId(menu.categorias[0].id);
@@ -1017,6 +1024,34 @@ export default function App() {
               )}
             </div>
             <button className="btn block" style={{ marginTop: 14 }} onClick={() => setProductoModal(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {bienvenida && menu?.mesero && (
+        <div className="modal-bg" onClick={() => setBienvenida(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 20, color: '#8b95a6', marginBottom: 4 }}>{menu.tenant.nombre}</div>
+            <div style={{ width: 96, height: 96, borderRadius: '50%', margin: '10px auto', overflow: 'hidden', background: 'linear-gradient(135deg, #f5b301, #7a5b00)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {menu.mesero.fotoUrl ? (
+                <img src={menu.mesero.fotoUrl} alt={menu.mesero.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: 40, fontWeight: 800, color: '#fff' }}>{(menu.mesero.nombre || 'M')[0]}</span>
+              )}
+            </div>
+            <h2 style={{ marginTop: 4 }}>{menu.mesero.nombre}</h2>
+            <div className="subtitle" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              ¡Hola! Soy quien tendrá el gusto de atenderlos hoy.
+            </div>
+            <div style={{ marginTop: 16, padding: 12, background: 'rgba(245,179,1,.08)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 24 }}>🛎️</span>
+              <span className="subtitle" style={{ fontSize: 13, textAlign: 'left' }}>
+                Usa el botón <b style={{ color: 'var(--accent)' }}>Llamar mesero</b> cuando necesites ayuda.
+              </span>
+            </div>
+            <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => setBienvenida(false)}>
+              ¡Empecemos!
+            </button>
           </div>
         </div>
       )}

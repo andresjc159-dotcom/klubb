@@ -70,6 +70,14 @@ export class PublicController {
       include: { miembros: { select: { id: true, alias: true } } },
     });
 
+    const asignacion = await this.prisma.asignacionMesero.findFirst({
+      where: { mesaId: mesa.id },
+      include: { user: { select: { nombre: true, fotoUrl: true } } },
+    });
+    const mesero = asignacion?.user
+      ? { nombre: asignacion.user.nombre, fotoUrl: asignacion.user.fotoUrl }
+      : null;
+
     const esPro = mesa.tenant.plan !== 'BASICA';
 
     const promociones = esPro
@@ -109,6 +117,7 @@ export class PublicController {
         mensajeBienvenida: mesa.tenant.mensajeBienvenida,
       },
       mesa: { id: mesa.id, nombre: mesa.nombre, zona: mesa.zona.nombre },
+      mesero,
       sesion: sesion && sesion.activo
         ? { id: sesion.id, activo: sesion.activo, miembros: sesion.miembros }
         : null,
