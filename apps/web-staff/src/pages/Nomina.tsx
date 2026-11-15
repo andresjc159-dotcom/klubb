@@ -207,6 +207,17 @@ export default function Nomina() {
         ))}
       </div>
 
+      <div className="card" style={{ marginTop: 16, background: 'rgba(245,179,1,.05)', borderColor: 'rgba(245,179,1,.25)' }}>
+        <h3>¿Cómo funciona la nómina?</h3>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.8, color: '#8b95a6' }}>
+          <li><b style={{ color: '#cbd5e1' }}>Conceptos</b>: define los ingresos y deducciones (fijos, % del sueldo base o % de las ventas).</li>
+          <li><b style={{ color: '#cbd5e1' }}>Generar nómina</b>: elige el rango de fechas y crea la liquidación de todos los empleados.</li>
+          <li>El cálculo suma <b style={{ color: '#cbd5e1' }}>base + propinas + comisiones + otros</b> y resta <b style={{ color: '#f87171' }}>deducciones</b>.</li>
+          <li><b style={{ color: '#cbd5e1' }}>Prestaciones y aportes</b>: son provisiones informativas (no se descuentan del pago), calculadas con los porcentajes que configures.</li>
+          <li>Puedes <b style={{ color: '#cbd5e1' }}>exportar a CSV</b> cada nómina para tu contador.</li>
+        </ul>
+      </div>
+
       {conceptoForm && (
         <div className="modal-bg" onClick={() => setConceptoForm(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

@@ -10,6 +10,7 @@ export default function Bodega() {
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
   const [form, setForm] = useState<any>(null);
+  const [busqueda, setBusqueda] = useState('');
 
   const cargar = useCallback(() => {
     api<any[]>('/bodega/documentos').then(setDocumentos).catch(console.error);
@@ -57,6 +58,10 @@ export default function Bodega() {
     }
   }
 
+  const productosFiltrados = productos.filter((p) =>
+    (p.nombre || '').toLowerCase().includes((busqueda || '').toLowerCase()),
+  );
+
   return (
     <div>
       <div className="topbar">
@@ -65,10 +70,10 @@ export default function Bodega() {
           <div className="sub">Entradas y salidas de inventario</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn primary" onClick={() => setForm({ tipo: 'INGRESO', factura: '', motivo: '', items: [] })}>
+          <button className="btn primary" onClick={() => { setBusqueda(''); setForm({ tipo: 'INGRESO', factura: '', motivo: '', items: [] }); }}>
             <Plus size={16} /> Ingreso
           </button>
-          <button className="btn" onClick={() => setForm({ tipo: 'SALIDA', factura: '', motivo: '', items: [] })}>
+          <button className="btn" onClick={() => { setBusqueda(''); setForm({ tipo: 'SALIDA', factura: '', motivo: '', items: [] }); }}>
             <Plus size={16} /> Salida
           </button>
         </div>
@@ -124,22 +129,64 @@ export default function Bodega() {
               </>
             )}
             <label style={{ marginTop: 12 }}>Productos</label>
-            <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 12, padding: 8 }}>
-              {productos.map((p) => {
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="🔍 Buscar producto…"
+              style={{ marginBottom: 8 }}
+            />
+            <div style={{ maxHeight: 240, overflow: 'auto' }}>
+              {productosFiltrados.map((p) => {
                 const item = form.items.find((i: any) => i.productoId === p.id);
+                const sel = !!item;
                 return (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                    <input type="checkbox" checked={!!item} onChange={() => toggleItem(p.id)} />
-                    <span style={{ flex: 1 }}>
-                      {p.emoji || '🍸'} {p.nombre} <span className="meta">(stock {p.stock})</span>
-                    </span>
-                    {item && (
-                      <input type="number" min={1} value={item.cantidad} onChange={(e) => setCantidad(p.id, Number(e.target.value))} style={{ width: 70 }} />
+                  <div
+                    key={p.id}
+                    className="list-item"
+                    style={{
+                      padding: 10,
+                      cursor: 'pointer',
+                      background: sel ? 'rgba(245,179,1,.06)' : undefined,
+                      borderColor: sel ? 'var(--accent)' : undefined,
+                    }}
+                    onClick={() => { if (!sel) toggleItem(p.id); }}
+                  >
+                    <div className="emoji-tile" style={{ fontSize: 20 }}>{p.emoji || '🍸'}</div>
+                    <div className="body">
+                      <div className="title">{p.nombre}</div>
+                      <div className="meta">Stock {p.stock}</div>
+                    </div>
+                    {sel ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button className="btn sm" onClick={(e) => { e.stopPropagation(); toggleItem(p.id); }}>✕</button>
+                        <button className="btn sm" onClick={(e) => { e.stopPropagation(); setCantidad(p.id, Math.max(1, item.cantidad - 1)); }}>−</button>
+                        <b>{item.cantidad}</b>
+                        <button className="btn sm" onClick={(e) => { e.stopPropagation(); setCantidad(p.id, item.cantidad + 1); }}>+</button>
+                      </div>
+                    ) : (
+                      <button className="btn primary sm" onClick={(e) => { e.stopPropagation(); toggleItem(p.id); }}>+</button>
                     )}
                   </div>
                 );
               })}
+              {productosFiltrados.length === 0 && (
+                <div className="sub" style={{ padding: 16, textAlign: 'center' }}>Sin resultados.</div>
+              )}
             </div>
+            {form.items.length > 0 && (
+              <div style={{ marginTop: 10, padding: 10, background: 'rgba(245,179,1,.06)', borderRadius: 12 }}>
+                <div className="sub" style={{ marginBottom: 6 }}>Agregados ({form.items.length})</div>
+                {form.items.map((i: any) => {
+                  const p = productos.find((x) => x.id === i.productoId);
+                  return (
+                    <div key={i.productoId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '2px 0' }}>
+                      <span>{p?.emoji || '🍸'} {p?.nombre}</span>
+                      <b>{i.cantidad} und</b>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardar}>Guardar documento</button>
           </div>
         </div>

@@ -128,6 +128,17 @@ export default function Turnos() {
         {staff.length === 0 && <div className="sub" style={{ padding: 12 }}>No hay empleados activos.</div>}
       </div>
 
+      <div className="card" style={{ marginTop: 16, background: 'rgba(56,189,248,.05)', borderColor: 'rgba(56,189,248,.25)' }}>
+        <h3>¿Cómo funciona el cuadro de turnos?</h3>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.8, color: '#8b95a6' }}>
+          <li>Las <b style={{ color: '#cbd5e1' }}>filas</b> son los empleados y las <b style={{ color: '#cbd5e1' }}>columnas</b> los días de la semana.</li>
+          <li>Haz clic en el <b style={{ color: '#cbd5e1' }}>+</b> de un día para asignar un turno (tipo + hora de entrada y salida).</li>
+          <li>Usa las flechas <b style={{ color: '#cbd5e1' }}>◀ ▶</b> para moverte entre semanas, o <b style={{ color: '#cbd5e1' }}>Hoy</b> para volver a la semana actual.</li>
+          <li>Para quitar un turno, haz clic en el <b style={{ color: '#f87171' }}>🗑</b> de esa casilla.</li>
+          <li>Estos turnos alimentan la <b style={{ color: '#cbd5e1' }}>asistencia</b> y el cálculo de <b style={{ color: '#cbd5e1' }}>nómina</b>.</li>
+        </ul>
+      </div>
+
       {form && (
         <div className="modal-bg" onClick={() => setForm(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
