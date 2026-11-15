@@ -84,6 +84,7 @@ export class NominaController {
   @Post('asistencia/entrada')
   async marcarEntrada(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);
+    if (!tenantId) throw new BadRequestException('Sin local asignado');
     const fecha = new Date().toISOString().slice(0, 10);
     return this.prisma.asistencia.upsert({
       where: { tenantId_userId_fecha: { tenantId, userId: req.user.userId, fecha } },
@@ -96,6 +97,7 @@ export class NominaController {
   @Post('asistencia/salida')
   async marcarSalida(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);
+    if (!tenantId) throw new BadRequestException('Sin local asignado');
     const fecha = new Date().toISOString().slice(0, 10);
     const asistencia = await this.prisma.asistencia.findUnique({
       where: { tenantId_userId_fecha: { tenantId, userId: req.user.userId, fecha } },
@@ -166,6 +168,7 @@ export class NominaController {
   @Get('config')
   async getConfig(@Req() req: any) {
     const tenantId = tenantEfectivo(req.user);
+    if (!tenantId) throw new BadRequestException('Sin local asignado');
     return this.prisma.configNomina.upsert({
       where: { tenantId },
       update: {},
@@ -176,6 +179,7 @@ export class NominaController {
   @Patch('config')
   async setConfig(@Req() req: any, @Body() body: any) {
     const tenantId = tenantEfectivo(req.user);
+    if (!tenantId) throw new BadRequestException('Sin local asignado');
     const data: any = {};
     const keys = [
       'prima',
