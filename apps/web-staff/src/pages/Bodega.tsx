@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useToast } from '../components/Toast';
 
 const MOTIVOS = ['Dañado', 'Vencido', 'Cambio de referencia', 'Otro'];
+const CONCEPTOS = ['Compra', 'Cortesía', 'Bonificación', 'Otro'];
 
 export default function Bodega() {
   const toast = useToast();
@@ -11,6 +12,7 @@ export default function Bodega() {
   const [productos, setProductos] = useState<any[]>([]);
   const [form, setForm] = useState<any>(null);
   const [busqueda, setBusqueda] = useState('');
+  const [detalle, setDetalle] = useState<any>(null);
 
   const cargar = useCallback(() => {
     api<any[]>('/bodega/documentos').then(setDocumentos).catch(console.error);
@@ -47,6 +49,7 @@ export default function Bodega() {
           tipo: form.tipo,
           factura: form.factura,
           motivo: form.motivo,
+          concepto: form.concepto,
           items: form.items,
         }),
       });
@@ -70,10 +73,10 @@ export default function Bodega() {
           <div className="sub">Entradas y salidas de inventario</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn primary" onClick={() => { setBusqueda(''); setForm({ tipo: 'INGRESO', factura: '', motivo: '', items: [] }); }}>
+          <button className="btn primary" onClick={() => { setBusqueda(''); setForm({ tipo: 'INGRESO', factura: '', motivo: '', concepto: 'Compra', items: [] }); }}>
             <Plus size={16} /> Ingreso
           </button>
-          <button className="btn" onClick={() => { setBusqueda(''); setForm({ tipo: 'SALIDA', factura: '', motivo: '', items: [] }); }}>
+          <button className="btn" onClick={() => { setBusqueda(''); setForm({ tipo: 'SALIDA', factura: '', motivo: '', concepto: '', items: [] }); }}>
             <Plus size={16} /> Salida
           </button>
         </div>
@@ -95,10 +98,13 @@ export default function Bodega() {
                   {d.numero} · {d.tipo === 'INGRESO' ? 'Ingreso' : 'Salida'}
                 </div>
                 <div className="meta">
-                  {d.tipo === 'INGRESO' ? `Factura: ${d.factura || '—'}` : `Motivo: ${d.motivo || '—'}`} · {new Date(d.createdAt).toLocaleString('es-CO')}
+                  {d.tipo === 'INGRESO'
+                    ? `Concepto: ${d.concepto || '—'} · Factura: ${d.factura || '—'}`
+                    : `Motivo: ${d.motivo || '—'}`} · {new Date(d.createdAt).toLocaleString('es-CO')}
                 </div>
               </div>
             </div>
+            <button className="btn sm" onClick={() => setDetalle(d)}>Ver / Imprimir</button>
           </div>
           <div style={{ marginTop: 8 }}>
             {d.items?.map((i: any) => (
@@ -116,7 +122,11 @@ export default function Bodega() {
             <h2>{form.tipo === 'INGRESO' ? 'Nuevo ingreso' : 'Nueva salida'}</h2>
             {form.tipo === 'INGRESO' ? (
               <>
-                <label>Número de factura</label>
+                <label>Concepto</label>
+                <select value={form.concepto} onChange={(e) => setForm({ ...form, concepto: e.target.value })}>
+                  {CONCEPTOS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <label style={{ marginTop: 12 }}>Número de factura</label>
                 <input value={form.factura} onChange={(e) => setForm({ ...form, factura: e.target.value })} placeholder="FAC-001" autoFocus />
               </>
             ) : (
@@ -188,6 +198,40 @@ export default function Bodega() {
               </div>
             )}
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardar}>Guardar documento</button>
+          </div>
+        </div>
+      )}
+
+      {detalle && (
+        <div className="modal-bg" onClick={() => setDetalle(null)}>
+          <div className="modal receipt" onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: 18 }}>KLUBB</div>
+              <div className="sub">Documento de {detalle.tipo === 'INGRESO' ? 'ingreso' : 'salida'}</div>
+              <div className="sub">{detalle.numero} · {new Date(detalle.createdAt).toLocaleString('es-CO')}</div>
+            </div>
+            <div style={{ borderTop: '1px dashed var(--line)', borderBottom: '1px dashed var(--line)', padding: '12px 0', display: 'grid', gap: 6, fontSize: 14 }}>
+              {detalle.tipo === 'INGRESO' ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Concepto</span><b>{detalle.concepto || '—'}</b></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Factura</span><b>{detalle.factura || '—'}</b></div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Motivo</span><b>{detalle.motivo || '—'}</b></div>
+              )}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              {detalle.items?.map((i: any) => (
+                <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
+                  <span>{i.producto?.emoji || '🍸'} {i.producto?.nombre}</span>
+                  <b>{i.cantidad} und</b>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button className="btn primary block" onClick={() => window.print()}>Imprimir</button>
+              <button className="btn block" onClick={() => setDetalle(null)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}

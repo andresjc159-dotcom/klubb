@@ -38,6 +38,7 @@ export class BodegaController {
       tipo: 'INGRESO' | 'SALIDA';
       factura?: string;
       motivo?: string;
+      concepto?: string;
       items: Array<{ productoId: string; cantidad: number }>;
     },
   ) {
@@ -65,6 +66,7 @@ export class BodegaController {
         numero,
         factura: body.factura,
         motivo: body.motivo,
+        concepto: body.concepto,
         items: {
           create: body.items.map((i) => ({
             productoId: i.productoId,

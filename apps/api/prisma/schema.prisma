@@ -369,6 +369,7 @@ model DocumentoBodega {
   numero    String
   factura   String?
   motivo    String?
+  concepto  String?
   createdAt DateTime               @default(now())
   items     DocumentoBodegaItem[]
 }
