@@ -31,8 +31,12 @@ interface Promocion {
   id: string;
   nombre: string;
   descripcion?: string;
+  tipo?: string;
   descuento: number;
+  precio?: number;
+  imagenUrl?: string;
   productos: Producto[];
+  items?: Array<{ productoId: string; cantidad: number; producto?: Producto }>;
 }
 interface Menu {
   abierto?: boolean;
@@ -188,6 +192,7 @@ export default function App() {
   const [tab, setTab] = useState<'menu' | 'cuenta' | 'musica'>('menu');
   const [catId, setCatId] = useState('');
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [cartPromos, setCartPromos] = useState<Record<string, number>>({});
   const [checkout, setCheckout] = useState(false);
   const [modo, setModo] = useState<'MESA' | 'PICKUP'>('MESA');
   const [propina, setPropina] = useState(0);
@@ -424,6 +429,15 @@ export default function App() {
       else n[id] = q;
       return n;
     });
+  const cantidadCombo = (id: string) => cartPromos[id] || 0;
+  const toggleCombo = (id: string, d: number) =>
+    setCartPromos((prev) => {
+      const n = { ...prev };
+      const q = (n[id] || 0) + d;
+      if (q <= 0) delete n[id];
+      else n[id] = q;
+      return n;
+    });
 
   const items = Object.entries(cart)
     .map(([id, q]) => {
@@ -432,7 +446,17 @@ export default function App() {
     })
     .filter(Boolean) as Array<{ productoId: string; cantidad: number; nombre: string; precio: number }>;
 
-  const subtotal = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+  const comboItems = Object.entries(cartPromos)
+    .map(([id, q]) => {
+      const promo = menu?.promociones.find((p) => p.id === id);
+      return promo ? { promocionId: id, cantidad: q, nombre: promo.nombre, precio: promo.precio ?? 0 } : null;
+    })
+    .filter(Boolean) as Array<{ promocionId: string; cantidad: number; nombre: string; precio: number }>;
+
+  const subtotal =
+    items.reduce((s, i) => s + i.precio * i.cantidad, 0) +
+    comboItems.reduce((s, i) => s + i.precio * i.cantidad, 0);
+  const totalArticulos = items.length + comboItems.length;
   const totalPropina = Math.round((subtotal * propina) / 100);
   const total = subtotal + totalPropina;
 
@@ -442,6 +466,7 @@ export default function App() {
     setJoinStep('landing');
     setPedidoActivo(null);
     setCart({});
+    setCartPromos({});
     setCheckout(false);
   }
 
@@ -455,7 +480,10 @@ export default function App() {
         modo,
         propina: totalPropina,
         metodoPago,
-        items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
+        items: [
+          ...items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
+          ...comboItems.map((c) => ({ promocionId: c.promocionId, cantidad: c.cantidad })),
+        ],
       }),
     });
     const data = await res.json();
@@ -472,6 +500,7 @@ export default function App() {
       Notification.requestPermission();
     }
     setCart({});
+    setCartPromos({});
     setCheckout(false);
     cargarSesion();
   }
@@ -819,36 +848,87 @@ export default function App() {
                 {(menu.promociones || []).length === 0 && (
                   <div className="cdesc">{t('sin.promos')}</div>
                 )}
-                {(menu.promociones || []).map((promo) => (
-                  <div key={promo.id} style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <b style={{ fontSize: 15 }}>🎁 {promo.nombre}</b>
-                      {promo.descuento > 0 && <span className="pill ok">-{promo.descuento}%</span>}
-                    </div>
-                    {promo.descripcion && <div className="cdesc" style={{ marginBottom: 8 }}>{promo.descripcion}</div>}
-                    {promo.productos.map((p) => (
-                      <div className="carta-card" key={p.id} onClick={() => setProductoModal(p)}>
-                        <div className="pimg">{p.emoji || '🍸'}</div>
-                        <div className="cbody">
-                          <div className="cname">{p.nombre}</div>
-                          <div className="cdesc">{p.descripcion || promo.nombre}</div>
+                {(menu.promociones || []).map((promo) => {
+                  if (promo.tipo === 'COMBO') {
+                    return (
+                      <div key={promo.id} style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <b style={{ fontSize: 15 }}>🎁 {promo.nombre}</b>
+                          <span className="pill ok">Combo</span>
                         </div>
-                        <div className="cfoot">
-                          <span className="cprice">${p.precio.toLocaleString('es-CO')}</span>
-                          {cantidad(p.id) > 0 ? (
-                            <div className="qty">
-                              <button onClick={(e) => { e.stopPropagation(); toggle(p.id, -1); }}>−</button>
-                              <span>{cantidad(p.id)}</span>
-                              <button onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
+                        {promo.descripcion && <div className="cdesc" style={{ marginBottom: 8 }}>{promo.descripcion}</div>}
+                        <div className="carta-card">
+                          <div className="pimg">
+                            {promo.imagenUrl ? (
+                              <img src={promo.imagenUrl} alt={promo.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              '🎁'
+                            )}
+                          </div>
+                          <div className="cbody">
+                            <div className="cname">{promo.nombre}</div>
+                            <div className="cdesc">
+                              {(promo.items || []).map((it) => `${it.cantidad}x ${it.producto?.nombre || ''}`).join(' · ')}
                             </div>
-                          ) : (
-                            <button className="add-btn" onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
-                          )}
+                          </div>
+                          <div className="cfoot">
+                            <span className="cprice">${(promo.precio ?? 0).toLocaleString('es-CO')}</span>
+                            {cantidadCombo(promo.id) > 0 ? (
+                              <div className="qty">
+                                <button onClick={(e) => { e.stopPropagation(); toggleCombo(promo.id, -1); }}>−</button>
+                                <span>{cantidadCombo(promo.id)}</span>
+                                <button onClick={(e) => { e.stopPropagation(); toggleCombo(promo.id, 1); }}>+</button>
+                              </div>
+                            ) : (
+                              <button className="add-btn" onClick={(e) => { e.stopPropagation(); toggleCombo(promo.id, 1); }}>+</button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ))}
+                    );
+                  }
+                  const precioPromo = promo.tipo === 'PRECIO_FIJO' ? promo.precio : null;
+                  return (
+                    <div key={promo.id} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <b style={{ fontSize: 15 }}>🎁 {promo.nombre}</b>
+                        {promo.descuento > 0 && <span className="pill ok">-{promo.descuento}%</span>}
+                        {promo.tipo === 'PRECIO_FIJO' && <span className="pill ok">Oferta</span>}
+                      </div>
+                      {promo.descripcion && <div className="cdesc" style={{ marginBottom: 8 }}>{promo.descripcion}</div>}
+                      {promo.productos.map((p) => (
+                        <div className="carta-card" key={p.id} onClick={() => setProductoModal(p)}>
+                          <div className="pimg">{p.emoji || '🍸'}</div>
+                          <div className="cbody">
+                            <div className="cname">{p.nombre}</div>
+                            <div className="cdesc">{p.descripcion || promo.nombre}</div>
+                          </div>
+                          <div className="cfoot">
+                            <span className="cprice">
+                              {precioPromo != null ? (
+                                <>
+                                  ${precioPromo.toLocaleString('es-CO')}{' '}
+                                  <s style={{ color: '#8b95a6', fontSize: 12 }}>${p.precio.toLocaleString('es-CO')}</s>
+                                </>
+                              ) : (
+                                <>${p.precio.toLocaleString('es-CO')}</>
+                              )}
+                            </span>
+                            {cantidad(p.id) > 0 ? (
+                              <div className="qty">
+                                <button onClick={(e) => { e.stopPropagation(); toggle(p.id, -1); }}>−</button>
+                                <span>{cantidad(p.id)}</span>
+                                <button onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
+                              </div>
+                            ) : (
+                              <button className="add-btn" onClick={(e) => { e.stopPropagation(); toggle(p.id, 1); }}>+</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="carta">
@@ -898,9 +978,9 @@ export default function App() {
             ) : (
               <div className="subtitle">{t('sin.pedir')}</div>
             )}
-            {items.length > 0 && (
+            {totalArticulos > 0 && (
               <button className="btn primary block" style={{ marginTop: 12 }} onClick={() => setCheckout(true)}>
-                {t('revisar.carrito', { n: items.length })}
+                {t('revisar.carrito', { n: totalArticulos })}
               </button>
             )}
 
@@ -922,7 +1002,7 @@ export default function App() {
                   </div>
                   {(m.pedidos || []).map((p: any) => (
                     <div key={p.id} style={{ fontSize: 13, color: '#8b95a6', paddingLeft: 19, marginBottom: 4 }}>
-                      {p.codigo} · {p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}
+                      {p.codigo} · {p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}
                       <span style={{ color: 'var(--text)', marginLeft: 6 }}>${p.total.toLocaleString('es-CO')}</span>
                     </div>
                   ))}
@@ -954,10 +1034,10 @@ export default function App() {
 
       </div>
 
-      {items.length > 0 && tab === 'menu' && (
+      {totalArticulos > 0 && tab === 'menu' && (
         <div className="cartbar">
           <div className="inner">
-            <span style={{ fontSize: 14 }}><b>{items.length} {t('art')}</b> · ${total.toLocaleString('es-CO')}</span>
+            <span style={{ fontSize: 14 }}><b>{totalArticulos} {t('art')}</b> · ${total.toLocaleString('es-CO')}</span>
             <button className="btn primary" onClick={() => setCheckout(true)}>{t('enviar.pedido')}</button>
           </div>
         </div>
@@ -976,6 +1056,11 @@ export default function App() {
             {items.map((i) => (
               <div key={i.productoId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '5px 0' }}>
                 <span>{i.cantidad}x {i.nombre}</span><span>${(i.precio * i.cantidad).toLocaleString('es-CO')}</span>
+              </div>
+            ))}
+            {comboItems.map((c) => (
+              <div key={c.promocionId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '5px 0' }}>
+                <span>{c.cantidad}x {c.nombre} 🎁</span><span>${(c.precio * c.cantidad).toLocaleString('es-CO')}</span>
               </div>
             ))}
             <div style={{ borderTop: '1px solid var(--line)', margin: '12px 0' }} />

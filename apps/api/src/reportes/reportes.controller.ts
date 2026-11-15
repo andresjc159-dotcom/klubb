@@ -69,12 +69,12 @@ export class ReportesController {
     for (const p of pedidos) {
       for (const d of p.detalles) {
         const prod = d.producto;
-        const nombre = prod?.nombre || 'Desconocido';
+        const nombre = d.nombre || prod?.nombre || 'Desconocido';
         const ing = d.precioUnitario * d.cantidad;
         const costo = (prod?.costo ?? 0) * d.cantidad;
         ingresos += ing;
         ganancia += ing - costo;
-        const key = prod?.id || nombre;
+        const key = prod?.id || d.promocionId || nombre;
         productoStats[key] = productoStats[key] || {
           id: key,
           nombre,

@@ -135,7 +135,7 @@ export default function Dashboard() {
                   {p.codigo} · {p.mesa?.nombre}
                 </div>
                 <div className="meta">
-                  {p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}
+                  {p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}
                 </div>
               </div>
               <span className={`pill ${p.estado === 'LISTO' ? 'ok' : p.estado === 'RECIBIDO' ? 'bad' : 'warn'}`}>

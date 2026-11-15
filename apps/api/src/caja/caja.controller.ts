@@ -66,7 +66,7 @@ export class CajaController {
     const vendidosMap: Record<string, { cantidad: number; total: number }> = {};
     for (const p of pedidosVenta) {
       for (const d of p.detalles) {
-        const nombre = d.producto?.nombre || 'Desconocido';
+        const nombre = d.nombre || d.producto?.nombre || 'Desconocido';
         vendidosMap[nombre] = vendidosMap[nombre] || { cantidad: 0, total: 0 };
         vendidosMap[nombre].cantidad += d.cantidad;
         vendidosMap[nombre].total += d.cantidad * d.precioUnitario;

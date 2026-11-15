@@ -421,7 +421,7 @@ export default function Mesero() {
             <div className="emoji-tile"><CheckCircle2 size={18} color="#4ade80" /></div>
             <div className="body">
               <div className="title">{p.codigo} · {p.mesa?.nombre}{p.apoyo && <span className="pill info" style={{ marginLeft: 6 }}>Apoyo</span>}</div>
-              <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}</div>
+              <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}</div>
             </div>
             <button className="btn primary sm" onClick={() => marcarEntregado(p.id)}>Entregar</button>
           </div>
@@ -438,7 +438,7 @@ export default function Mesero() {
             <div className="emoji-tile"><ClipboardList size={18} color="#8b95a6" /></div>
             <div className="body">
               <div className="title">{p.codigo} · {p.mesa?.nombre}{p.apoyo && <span className="pill info" style={{ marginLeft: 6 }}>Apoyo</span>}</div>
-              <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}</div>
+              <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}</div>
               <div className="meta" style={{ marginTop: 4 }}>
                 Pago: {METODO_LABEL[p.metodoPago] || p.metodoPago || '—'}
                 <span className="pill warn" style={{ marginLeft: 6 }}>Por pagar</span>
@@ -528,7 +528,7 @@ export default function Mesero() {
               <div className="list-item" key={p.id} style={{ padding: 10 }}>
                 <div className="body">
                   <div className="title">{p.codigo}</div>
-                  <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}</div>
+                  <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}</div>
                 </div>
                 <span style={{ fontWeight: 700 }}>{fmt(p.total)}</span>
               </div>
@@ -571,7 +571,7 @@ export default function Mesero() {
                 {pedidosMesa.map((p) => (
                   <div className="list-item" key={p.id} style={{ padding: 10 }}>
                     <div className="body">
-                      <div className="title">{p.codigo} · {p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(', ')}</div>
+                      <div className="title">{p.codigo} · {p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(', ')}</div>
                       <div className="meta">{fmt(p.total)}</div>
                     </div>
                     <span className={`pill ${p.estado === 'LISTO' ? 'ok' : p.estado === 'ENTREGADO' ? 'info' : p.estado === 'RECIBIDO' ? 'bad' : 'warn'}`}>

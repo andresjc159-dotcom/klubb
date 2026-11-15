@@ -250,6 +250,7 @@ model Producto {
   ordenItems  OrdenCompraItem[]
   receta      RecetaInsumo[]
   promociones Promocion[]
+  promocionItems PromocionItem[]
   documentoItems DocumentoBodegaItem[]
 
   @@unique([tenantId, nombre])
@@ -329,11 +330,15 @@ model Pedido {
 }
 
 model DetallePedido {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   pedidoId       String
-  pedido         Pedido   @relation(fields: [pedidoId], references: [id])
-  productoId     String
-  producto       Producto @relation(fields: [productoId], references: [id])
+  pedido         Pedido    @relation(fields: [pedidoId], references: [id])
+  productoId     String?
+  producto       Producto? @relation(fields: [productoId], references: [id])
+  promocionId    String?
+  esPromo        Boolean   @default(false)
+  nombre         String?
+  estacion       String?
   cantidad       Int
   precioUnitario Int
   notas          String?
@@ -562,18 +567,32 @@ model Factura {
 }
 
 model Promocion {
-  id          String      @id @default(cuid())
+  id          String           @id @default(cuid())
   tenantId    String
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
   nombre      String
   descripcion String?
-  descuento   Int         @default(0)
-  activa      Boolean     @default(false)
+  tipo        String           @default("DESCUENTO")
+  descuento   Int              @default(0)
+  precio      Int?
+  imagenUrl   String?
+  estacion    String           @default("BARRA")
+  activa      Boolean          @default(false)
   horaInicio  DateTime?
   horaFin     DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   productos   Producto[]
+  items       PromocionItem[]
+}
+
+model PromocionItem {
+  id           String    @id @default(cuid())
+  promocionId  String
+  promocion    Promocion @relation(fields: [promocionId], references: [id], onDelete: Cascade)
+  productoId   String
+  producto     Producto  @relation(fields: [productoId], references: [id])
+  cantidad     Int
 }
 
 model ConfigPuntos {

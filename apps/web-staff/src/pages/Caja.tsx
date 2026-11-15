@@ -329,7 +329,7 @@ export default function Caja() {
                 <div className="emoji-tile"><Receipt size={18} color="#8b95a6" /></div>
                 <div className="body">
                   <div className="title">{p.codigo}</div>
-                  <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.producto?.nombre}`).join(' · ')}</div>
+                  <div className="meta">{p.detalles?.map((d: any) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`).join(' · ')}</div>
                 </div>
                 <span className={`pill ${p.estado === 'LISTO' ? 'ok' : p.estado === 'RECIBIDO' ? 'bad' : 'warn'}`}>
                   {p.estado.replaceAll('_', ' ').toLowerCase()}

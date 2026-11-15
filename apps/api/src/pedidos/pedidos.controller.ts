@@ -47,7 +47,7 @@ export class PedidosController {
     @Body()
     body: {
       mesaId: string;
-      items: Array<{ productoId: string; cantidad: number; notas?: string }>;
+      items: Array<{ productoId?: string; promocionId?: string; cantidad: number; notas?: string }>;
       metodoPago?: MetodoPago;
       modo?: ModoEntrega;
     },
@@ -65,22 +65,61 @@ export class PedidosController {
       throw new NotFoundException('Mesa no encontrada');
     }
 
+    const promos = await this.prisma.promocion.findMany({
+      where: { tenantId, activa: true },
+      include: { productos: true, items: { include: { producto: true } } },
+    });
+    const precioPromoMap: Record<string, number> = {};
+    for (const p of promos) {
+      if (p.tipo === 'PRECIO_FIJO' && p.precio != null) {
+        for (const prod of p.productos) precioPromoMap[prod.id] = p.precio;
+      }
+    }
+    const combosMap = new Map(
+      promos.filter((p) => p.tipo === 'COMBO').map((p) => [p.id, p]),
+    );
+
+    const productIds = body.items
+      .filter((i) => i.productoId)
+      .map((i) => i.productoId as string);
+    const comboConstituyentes = promos
+      .filter((p) => p.tipo === 'COMBO')
+      .flatMap((p) => p.items.map((it) => it.productoId));
+    const allProductIds = Array.from(new Set([...productIds, ...comboConstituyentes]));
+
     const productos = await this.prisma.producto.findMany({
-      where: { id: { in: body.items.map((i) => i.productoId) } },
+      where: { id: { in: allProductIds } },
     });
     const recetas = await this.prisma.recetaInsumo.findMany({
-      where: { productoId: { in: body.items.map((i) => i.productoId) } },
+      where: { productoId: { in: allProductIds } },
     });
 
     let subtotal = 0;
     const detalles = body.items.map((item) => {
+      if (item.promocionId) {
+        const combo = combosMap.get(item.promocionId);
+        if (!combo) throw new NotFoundException('Combo no encontrado');
+        const precio = combo.precio ?? 0;
+        subtotal += precio * item.cantidad;
+        return {
+          productoId: null,
+          promocionId: combo.id,
+          esPromo: true,
+          nombre: combo.nombre,
+          estacion: combo.estacion,
+          cantidad: item.cantidad,
+          precioUnitario: precio,
+          notas: item.notas,
+        };
+      }
       const producto = productos.find((p) => p.id === item.productoId);
       if (!producto) throw new NotFoundException('Producto no encontrado');
-      subtotal += producto.precio * item.cantidad;
+      const precio = precioPromoMap[producto.id] ?? producto.precio;
+      subtotal += precio * item.cantidad;
       return {
         productoId: producto.id,
         cantidad: item.cantidad,
-        precioUnitario: producto.precio,
+        precioUnitario: precio,
         notas: item.notas,
       };
     });
@@ -108,24 +147,50 @@ export class PedidosController {
       });
 
       for (const d of detalles) {
-        await tx.producto.update({
-          where: { id: d.productoId },
-          data: { stock: { decrement: d.cantidad } },
-        });
-        await tx.movimientoInventario.create({
-          data: {
-            tenantId,
-            productoId: d.productoId,
-            tipo: 'VENTA',
-            cantidad: -d.cantidad,
-          },
-        });
-        const rec = recetas.filter((r) => r.productoId === d.productoId);
-        for (const r of rec) {
-          await tx.insumo.update({
-            where: { id: r.insumoId },
-            data: { cantidad: { decrement: r.cantidad * d.cantidad } },
+        if (d.esPromo) {
+          const combo = combosMap.get(d.promocionId as string);
+          if (!combo) continue;
+          for (const it of combo.items) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: { stock: { decrement: it.cantidad * d.cantidad } },
+            });
+            await tx.movimientoInventario.create({
+              data: {
+                tenantId,
+                productoId: it.productoId,
+                tipo: 'VENTA',
+                cantidad: -(it.cantidad * d.cantidad),
+              },
+            });
+            const rec = recetas.filter((r) => r.productoId === it.productoId);
+            for (const r of rec) {
+              await tx.insumo.update({
+                where: { id: r.insumoId },
+                data: { cantidad: { decrement: r.cantidad * it.cantidad * d.cantidad } },
+              });
+            }
+          }
+        } else {
+          await tx.producto.update({
+            where: { id: d.productoId as string },
+            data: { stock: { decrement: d.cantidad } },
           });
+          await tx.movimientoInventario.create({
+            data: {
+              tenantId,
+              productoId: d.productoId as string,
+              tipo: 'VENTA',
+              cantidad: -d.cantidad,
+            },
+          });
+          const rec = recetas.filter((r) => r.productoId === d.productoId);
+          for (const r of rec) {
+            await tx.insumo.update({
+              where: { id: r.insumoId },
+              data: { cantidad: { decrement: r.cantidad * d.cantidad } },
+            });
+          }
         }
       }
 
@@ -171,7 +236,7 @@ export class PedidosController {
           codigo: updated.codigo,
           mesa: updated.mesa.nombre,
           detalles: updated.detalles.map(
-            (d) => `${d.cantidad}x ${d.producto.nombre}`,
+            (d) => `${d.cantidad}x ${d.nombre || d.producto?.nombre}`,
           ),
         });
       }
@@ -204,28 +269,64 @@ export class PedidosController {
       throw new BadRequestException('No se puede cancelar: el pedido ya está en preparación');
     }
     const recetas = await this.prisma.recetaInsumo.findMany({
-      where: { productoId: { in: pedido.detalles.map((d) => d.productoId) } },
+      where: { productoId: { in: pedido.detalles.map((d) => d.productoId).filter(Boolean) as string[] } },
     });
+    const promoIds = pedido.detalles
+      .filter((d) => d.esPromo && d.promocionId)
+      .map((d) => d.promocionId as string);
+    const promos = promoIds.length
+      ? await this.prisma.promocion.findMany({
+          where: { id: { in: promoIds } },
+          include: { items: true },
+        })
+      : [];
+    const combosMap = new Map(promos.map((p) => [p.id, p]));
     const updated = await this.prisma.$transaction(async (tx) => {
       for (const d of pedido.detalles) {
-        await tx.producto.update({
-          where: { id: d.productoId },
-          data: { stock: { increment: d.cantidad } },
-        });
-        await tx.movimientoInventario.create({
-          data: {
-            tenantId: pedido.tenantId,
-            productoId: d.productoId,
-            tipo: 'DEVOLUCION',
-            cantidad: d.cantidad,
-          },
-        });
-        const rec = recetas.filter((r) => r.productoId === d.productoId);
-        for (const r of rec) {
-          await tx.insumo.update({
-            where: { id: r.insumoId },
-            data: { cantidad: { increment: r.cantidad * d.cantidad } },
+        if (d.esPromo) {
+          const combo = combosMap.get(d.promocionId as string);
+          if (!combo) continue;
+          for (const it of combo.items) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: { stock: { increment: it.cantidad * d.cantidad } },
+            });
+            await tx.movimientoInventario.create({
+              data: {
+                tenantId: pedido.tenantId,
+                productoId: it.productoId,
+                tipo: 'DEVOLUCION',
+                cantidad: it.cantidad * d.cantidad,
+              },
+            });
+            const rec = recetas.filter((r) => r.productoId === it.productoId);
+            for (const r of rec) {
+              await tx.insumo.update({
+                where: { id: r.insumoId },
+                data: { cantidad: { increment: r.cantidad * it.cantidad * d.cantidad } },
+              });
+            }
+          }
+        } else if (d.productoId) {
+          await tx.producto.update({
+            where: { id: d.productoId },
+            data: { stock: { increment: d.cantidad } },
           });
+          await tx.movimientoInventario.create({
+            data: {
+              tenantId: pedido.tenantId,
+              productoId: d.productoId,
+              tipo: 'DEVOLUCION',
+              cantidad: d.cantidad,
+            },
+          });
+          const rec = recetas.filter((r) => r.productoId === d.productoId);
+          for (const r of rec) {
+            await tx.insumo.update({
+              where: { id: r.insumoId },
+              data: { cantidad: { increment: r.cantidad * d.cantidad } },
+            });
+          }
         }
       }
       return tx.pedido.update({

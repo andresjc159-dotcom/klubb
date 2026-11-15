@@ -51,7 +51,7 @@ export default function KDS() {
     return pedidos
       .map((p) => ({
         ...p,
-        detalles: (p.detalles || []).filter((d: any) => d.producto?.estacion === miEstacion),
+        detalles: (p.detalles || []).filter((d: any) => (d.estacion || d.producto?.estacion) === miEstacion),
       }))
       .filter((p) => p.detalles.length > 0);
   }, [pedidos, filtraEstacion, miEstacion]);
@@ -108,10 +108,10 @@ export default function KDS() {
                   <div style={{ fontSize: 13, margin: '6px 0' }}>
                     {p.detalles.map((d: any) => (
                       <div key={d.id}>
-                        • {d.cantidad}x {d.producto?.nombre}
-                        {!filtraEstacion && d.producto?.estacion && (
+                        • {d.cantidad}x {d.nombre || d.producto?.nombre}
+                        {!filtraEstacion && (d.estacion || d.producto?.estacion) && (
                           <span className="pill mute" style={{ marginLeft: 6, fontSize: 9 }}>
-                            {ESTACION_LABEL[d.producto.estacion] || d.producto.estacion}
+                            {ESTACION_LABEL[d.estacion || d.producto.estacion] || d.estacion || d.producto.estacion}
                           </span>
                         )}
                       </div>
