@@ -17,10 +17,12 @@ export default function Nomina() {
   });
   const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().slice(0, 10));
   const [detalle, setDetalle] = useState<any>(null);
+  const [config, setConfig] = useState<any>(null);
 
   const cargar = useCallback(() => {
     api<any[]>('/nomina/conceptos').then(setConceptos).catch(() => {});
     api<any[]>('/nomina/nominas').then(setNominas).catch(() => {});
+    api<any>('/nomina/config').then(setConfig).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -53,6 +55,16 @@ export default function Nomina() {
     }
   }
 
+  async function guardarConfig() {
+    try {
+      await api('/nomina/config', { method: 'PATCH', body: JSON.stringify(config) });
+      toast('Configuración guardada', 'ok');
+      cargar();
+    } catch (e: any) {
+      toast(e.message || 'Error', 'bad');
+    }
+  }
+
   async function generarNomina() {
     try {
       const n = await api('/nomina/nominas', {
@@ -79,7 +91,7 @@ export default function Nomina() {
     const rows: string[][] = [];
     rows.push(['Nómina', n.periodo]);
     rows.push([]);
-    rows.push(['Empleado', 'Base', 'Propinas', 'Comisiones', 'Otros', 'Deducciones', 'Neto']);
+    rows.push(['Empleado', 'Base', 'Propinas', 'Comisiones', 'Otros', 'Deducciones', 'Prestaciones', 'Aportes', 'Neto']);
     (n.items || []).forEach((i: any) =>
       rows.push([
         i.user?.nombre,
@@ -88,6 +100,8 @@ export default function Nomina() {
         String(i.comisiones),
         String(i.otrosIngresos),
         String(i.deducciones),
+        String(i.provisiones ?? 0),
+        String(i.aportes ?? 0),
         String(i.neto),
       ]),
     );
@@ -148,6 +162,37 @@ export default function Nomina() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
+        <h3>Prestaciones, recargos y aportes</h3>
+        <div className="sub" style={{ marginBottom: 12 }}>Porcentajes usados en la liquidación (ajústalos a tu necesidad).</div>
+        {config && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+              {([
+                ['prima', 'Prima (%)'],
+                ['cesantias', 'Cesantías (%)'],
+                ['interesesCesantias', 'Intereses cesantías (%)'],
+                ['vacaciones', 'Vacaciones (%)'],
+                ['recargoNocturno', 'Recargo nocturno (%)'],
+                ['recargoDominical', 'Recargo dominical (%)'],
+                ['horaExtraDiurna', 'Hora extra diurna (%)'],
+                ['horaExtraNocturna', 'Hora extra nocturna (%)'],
+                ['aporteSalud', 'Aporte salud (%)'],
+                ['aportePension', 'Aporte pensión (%)'],
+                ['aporteArl', 'ARL (%)'],
+                ['aporteCaja', 'Caja de compensación (%)'],
+              ] as Array<[string, string]>).map(([key, label]) => (
+                <div key={key}>
+                  <label>{label}</label>
+                  <input type="number" step="0.01" value={config[key]} onChange={(e) => setConfig({ ...config, [key]: e.target.value })} />
+                </div>
+              ))}
+            </div>
+            <button className="btn primary" style={{ marginTop: 14 }} onClick={guardarConfig}>Guardar configuración</button>
+          </>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
         <h3>Historial de nóminas</h3>
         {nominas.length === 0 && <div className="sub">Aún no hay nóminas.</div>}
         {nominas.map((n) => (
@@ -200,6 +245,8 @@ export default function Nomina() {
                     <th style={{ padding: 6 }}>Comisiones</th>
                     <th style={{ padding: 6 }}>Otros</th>
                     <th style={{ padding: 6 }}>Deduc.</th>
+                    <th style={{ padding: 6 }}>Prest.</th>
+                    <th style={{ padding: 6 }}>Aportes</th>
                     <th style={{ padding: 6 }}>Neto</th>
                   </tr>
                 </thead>
@@ -212,6 +259,8 @@ export default function Nomina() {
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.comisiones)}</td>
                       <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.otrosIngresos)}</td>
                       <td style={{ padding: 6, textAlign: 'right', color: '#f87171' }}>−{fmt(i.deducciones)}</td>
+                      <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.provisiones ?? 0)}</td>
+                      <td style={{ padding: 6, textAlign: 'right' }}>{fmt(i.aportes ?? 0)}</td>
                       <td style={{ padding: 6, textAlign: 'right', fontWeight: 700 }}>{fmt(i.neto)}</td>
                     </tr>
                   ))}

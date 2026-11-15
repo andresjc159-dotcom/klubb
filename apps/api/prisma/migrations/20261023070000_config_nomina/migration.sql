@@ -1,0 +1,30 @@
+-- AlterTable
+ALTER TABLE "NominaItem" ADD COLUMN "provisiones" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "aportes" INTEGER NOT NULL DEFAULT 0;
+
+-- CreateTable
+CREATE TABLE "ConfigNomina" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "prima" DOUBLE PRECISION NOT NULL DEFAULT 8.33,
+    "cesantias" DOUBLE PRECISION NOT NULL DEFAULT 8.33,
+    "interesesCesantias" DOUBLE PRECISION NOT NULL DEFAULT 12,
+    "vacaciones" DOUBLE PRECISION NOT NULL DEFAULT 4.17,
+    "recargoNocturno" DOUBLE PRECISION NOT NULL DEFAULT 35,
+    "recargoDominical" DOUBLE PRECISION NOT NULL DEFAULT 75,
+    "horaExtraDiurna" DOUBLE PRECISION NOT NULL DEFAULT 25,
+    "horaExtraNocturna" DOUBLE PRECISION NOT NULL DEFAULT 75,
+    "aporteSalud" DOUBLE PRECISION NOT NULL DEFAULT 12.5,
+    "aportePension" DOUBLE PRECISION NOT NULL DEFAULT 16,
+    "aporteArl" DOUBLE PRECISION NOT NULL DEFAULT 0.522,
+    "aporteCaja" DOUBLE PRECISION NOT NULL DEFAULT 4,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "ConfigNomina_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ConfigNomina_tenantId_key" ON "ConfigNomina"("tenantId");
+
+-- AddForeignKey
+ALTER TABLE "ConfigNomina" ADD CONSTRAINT "ConfigNomina_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;

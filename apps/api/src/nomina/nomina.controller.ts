@@ -162,6 +162,45 @@ export class NominaController {
     return this.prisma.conceptoNomina.delete({ where: { id } });
   }
 
+  // ---------- Configuración de prestaciones ----------
+  @Get('config')
+  async getConfig(@Req() req: any) {
+    const tenantId = tenantEfectivo(req.user);
+    return this.prisma.configNomina.upsert({
+      where: { tenantId },
+      update: {},
+      create: { tenantId },
+    });
+  }
+
+  @Patch('config')
+  async setConfig(@Req() req: any, @Body() body: any) {
+    const tenantId = tenantEfectivo(req.user);
+    const data: any = {};
+    const keys = [
+      'prima',
+      'cesantias',
+      'interesesCesantias',
+      'vacaciones',
+      'recargoNocturno',
+      'recargoDominical',
+      'horaExtraDiurna',
+      'horaExtraNocturna',
+      'aporteSalud',
+      'aportePension',
+      'aporteArl',
+      'aporteCaja',
+    ];
+    for (const k of keys) {
+      if (body[k] !== undefined) data[k] = Number(body[k]);
+    }
+    return this.prisma.configNomina.upsert({
+      where: { tenantId },
+      update: data,
+      create: { tenantId, ...data },
+    });
+  }
+
   // ---------- Nómina ----------
   @Get('nominas')
   async nominas(@Req() req: any) {
@@ -193,6 +232,11 @@ export class NominaController {
     });
     const conceptos = await this.prisma.conceptoNomina.findMany({
       where: { tenantId, activo: true },
+    });
+    const config = await this.prisma.configNomina.upsert({
+      where: { tenantId },
+      update: {},
+      create: { tenantId },
     });
 
     const items = await Promise.all(
@@ -226,6 +270,14 @@ export class NominaController {
         }
 
         const base = u.base;
+        const prima = (base * config.prima) / 100;
+        const cesantias = (base * config.cesantias) / 100;
+        const intereses = (cesantias * config.interesesCesantias) / 100;
+        const vacaciones = (base * config.vacaciones) / 100;
+        const provisiones = Math.round(prima + cesantias + intereses + vacaciones);
+        const aportes = Math.round(
+          (base * (config.aporteSalud + config.aportePension + config.aporteArl + config.aporteCaja)) / 100,
+        );
         const neto = base + propinaTotal + comisiones + otrosIngresos - deducciones;
         return {
           userId: u.id,
@@ -234,6 +286,8 @@ export class NominaController {
           comisiones,
           otrosIngresos,
           deducciones,
+          provisiones,
+          aportes,
           neto,
         };
       }),

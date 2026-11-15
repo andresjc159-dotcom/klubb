@@ -117,6 +117,7 @@ model Tenant {
   asistencias       Asistencia[]
   conceptosNomina   ConceptoNomina[]
   nominas           Nomina[]
+  configNomina      ConfigNomina?
 }
 
 model User {
@@ -426,7 +427,29 @@ model NominaItem {
   comisiones    Int
   otrosIngresos Int
   deducciones   Int
+  provisiones   Int
+  aportes       Int
   neto          Int
+}
+
+model ConfigNomina {
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id])
+  prima              Float    @default(8.33)
+  cesantias          Float    @default(8.33)
+  interesesCesantias Float    @default(12)
+  vacaciones         Float    @default(4.17)
+  recargoNocturno    Float    @default(35)
+  recargoDominical   Float    @default(75)
+  horaExtraDiurna    Float    @default(25)
+  horaExtraNocturna  Float    @default(75)
+  aporteSalud        Float    @default(12.5)
+  aportePension      Float    @default(16)
+  aporteArl          Float    @default(0.522)
+  aporteCaja         Float    @default(4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Caja {
