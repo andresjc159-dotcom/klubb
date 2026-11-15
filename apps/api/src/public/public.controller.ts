@@ -45,10 +45,12 @@ export class PublicController {
     });
     if (!mesa) throw new NotFoundException('Mesa no encontrada');
 
-    const marca = await this.prisma.marca.findUnique({
-      where: { id: mesa.tenant.marcaId },
-      select: { colorPrimario: true, colorMarca: true },
-    });
+    const marca = mesa.tenant.marcaId
+      ? await this.prisma.marca.findUnique({
+          where: { id: mesa.tenant.marcaId },
+          select: { colorPrimario: true, colorMarca: true },
+        })
+      : null;
     const colorPrimario = marca?.colorPrimario ?? '#f5b301';
     const colorMarca = marca?.colorMarca ?? '#ffffff';
 
