@@ -143,6 +143,7 @@ export default function App() {
   const [productoModal, setProductoModal] = useState<any>(null);
   const [encuestaModal, setEncuestaModal] = useState(false);
   const [despedida, setDespedida] = useState(false);
+  const [localCerrado, setLocalCerrado] = useState(false);
   const [bienvenida, setBienvenida] = useState(false);
   const [estrellas, setEstrellas] = useState(5);
   const [comentario, setComentario] = useState('');
@@ -244,6 +245,11 @@ export default function App() {
       if (menu) localStorage.removeItem(LS(menu.mesa.id));
       setMiembro(null);
       setDespedida(true);
+    });
+    socket.on('local:cerrado', () => {
+      if (menu) localStorage.removeItem(LS(menu.mesa.id));
+      setMiembro(null);
+      setLocalCerrado(true);
     });
     return () => socket.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -510,6 +516,21 @@ export default function App() {
           <h2 style={{ marginTop: 8 }}>¡Gracias por tu visita!</h2>
           <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>Esperamos verte pronto.</div>
           <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => { setDespedida(false); setJoinStep('landing'); }}>
+            Entendido
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (localCerrado) {
+    return (
+      <div className="app">
+        <div className="centered">
+          <div style={{ fontSize: 56 }}>🔒</div>
+          <h2 style={{ marginTop: 8 }}>El local ha cerrado</h2>
+          <div className="subtitle" style={{ marginTop: 8, color: '#8b95a6' }}>Vuelve pronto. ¡Te esperamos!</div>
+          <button className="btn primary block" style={{ marginTop: 18 }} onClick={() => { setLocalCerrado(false); setJoinStep('landing'); }}>
             Entendido
           </button>
         </div>

@@ -16,6 +16,7 @@ import { Role } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../events/events.gateway';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { tenantEfectivo } from '../common/tenant.util';
@@ -23,7 +24,10 @@ import { METODOS_PAGO_DEFAULT } from '../common/metodos';
 
 @Controller('local')
 export class LocalController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventsGateway,
+  ) {}
 
   private tenantId(req: any): string {
     const id = tenantEfectivo(req.user);
@@ -45,10 +49,27 @@ export class LocalController {
   @Roles(Role.ADMIN, Role.MASTER)
   @Post('cerrar')
   async cerrar(@Req() req: any) {
-    return this.prisma.tenant.update({
-      where: { id: this.tenantId(req) },
+    const tenantId = this.tenantId(req);
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
       data: { abierto: false },
     });
+    await this.prisma.sesionMesa.updateMany({
+      where: { tenantId, activo: true },
+      data: { activo: false, terminadaEn: new Date() },
+    });
+    await this.prisma.mesa.updateMany({
+      where: { tenantId, estado: { not: 'LIBRE' } },
+      data: { estado: 'LIBRE' },
+    });
+    const mesas = await this.prisma.mesa.findMany({
+      where: { tenantId },
+      select: { id: true },
+    });
+    for (const m of mesas) {
+      this.events.emitToMesa(m.id, 'local:cerrado', {});
+    }
+    return { ok: true };
   }
 
   @UseGuards(AuthGuard('jwt'))
