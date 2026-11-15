@@ -75,6 +75,11 @@ enum TipoMovimiento {
   DEVOLUCION
 }
 
+enum TipoDocumentoBodega {
+  INGRESO
+  SALIDA
+}
+
 model Tenant {
   id                String    @id @default(cuid())
   nombre            String
@@ -107,6 +112,7 @@ model Tenant {
   proveedores       Proveedor[]
   ordenes           OrdenCompra[]
   insumos           Insumo[]
+  documentosBodega  DocumentoBodega[]
 }
 
 model User {
@@ -218,6 +224,7 @@ model Producto {
   ordenItems  OrdenCompraItem[]
   receta      RecetaInsumo[]
   promociones Promocion[]
+  documentoItems DocumentoBodegaItem[]
 
   @@unique([tenantId, nombre])
 }
@@ -326,6 +333,27 @@ model MovimientoInventario {
   tipo       TipoMovimiento
   cantidad   Int
   createdAt  DateTime       @default(now())
+}
+
+model DocumentoBodega {
+  id        String                 @id @default(cuid())
+  tenantId  String
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id])
+  tipo      TipoDocumentoBodega
+  numero    String
+  factura   String?
+  motivo    String?
+  createdAt DateTime               @default(now())
+  items     DocumentoBodegaItem[]
+}
+
+model DocumentoBodegaItem {
+  id          String          @id @default(cuid())
+  documentoId String
+  documento   DocumentoBodega @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  productoId  String
+  producto    Producto        @relation(fields: [productoId], references: [id])
+  cantidad    Int
 }
 
 model Caja {

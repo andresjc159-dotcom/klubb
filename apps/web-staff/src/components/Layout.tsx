@@ -21,6 +21,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Warehouse,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../auth';
@@ -85,6 +86,7 @@ export default function Layout() {
     { to: '/reportes', label: 'Reportes', Icon: BarChart3, show: operaLocal && esPro },
     { to: '/reservas', label: 'Reservas', Icon: CalendarDays, show: operaLocal || isMesero },
     { to: '/compras', label: 'Compras', Icon: Truck, show: operaLocal },
+    { to: '/bodega', label: 'Bodega', Icon: Warehouse, show: operaLocal },
     { to: '/encuestas', label: 'Encuestas', Icon: Star, show: operaLocal },
     { to: '/kds', label: 'Pedidos (KDS)', Icon: Martini, show: operaLocal || isBarra },
     { to: '/caja', label: 'Caja', Icon: Wallet, show: operaLocal || isCajero },

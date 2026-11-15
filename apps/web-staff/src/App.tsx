@@ -21,6 +21,7 @@ import Reportes from './pages/Reportes';
 import Reservas from './pages/Reservas';
 import Compras from './pages/Compras';
 import Encuestas from './pages/Encuestas';
+import Bodega from './pages/Bodega';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="reportes" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Reportes /></RoleRoute>} />
               <Route path="reservas" element={<RoleRoute roles={['ADMIN', 'MASTER', 'MESERO']}><Reservas /></RoleRoute>} />
               <Route path="compras" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Compras /></RoleRoute>} />
+              <Route path="bodega" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Bodega /></RoleRoute>} />
               <Route path="encuestas" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Encuestas /></RoleRoute>} />
               <Route path="config" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Config /></RoleRoute>} />
               <Route path="kds" element={<RoleRoute roles={['ADMIN', 'MASTER', 'BARRA', 'BARMAN', 'COCINA']}><KDS /></RoleRoute>} />
