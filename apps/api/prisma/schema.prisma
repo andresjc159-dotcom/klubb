@@ -96,7 +96,7 @@ model Tenant {
   nombre            String
   slug              String    @unique
   marcaId           String?
-  marca             Marca?    @relation(fields: [marcaId], references: [id], onDelete: SET NULL)
+  marca             Marca?    @relation(fields: [marcaId], references: [id], onDelete: SetNull)
   logoUrl           String?
   mensajeBienvenida String?
   direccion         String?
@@ -140,7 +140,7 @@ model User {
   tenantId       String?
   tenant         Tenant?            @relation(fields: [tenantId], references: [id])
   marcaId        String?
-  marca          Marca?             @relation("MarcaMaster", fields: [marcaId], references: [id], onDelete: SET NULL)
+  marca          Marca?             @relation("MarcaMaster", fields: [marcaId], references: [id], onDelete: SetNull)
   nombre         String
   email          String             @unique
   telefono       String?
