@@ -82,13 +82,15 @@ enum TipoDocumentoBodega {
 }
 
 model Marca {
-  id        String   @id @default(cuid())
-  nombre    String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenants   Tenant[]
-  masters   User[]   @relation("MarcaMaster")
+  id            String   @id @default(cuid())
+  nombre        String
+  slug          String   @unique
+  colorPrimario String   @default("#f5b301")
+  colorMarca    String   @default("#ffffff")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenants       Tenant[]
+  masters       User[]   @relation("MarcaMaster")
 }
 
 model Tenant {
@@ -100,8 +102,6 @@ model Tenant {
   logoUrl           String?
   mensajeBienvenida String?
   direccion         String?
-  colorPrimario     String    @default("#f5b301")
-  colorMarca        String    @default("#ffffff")
   metodosPago       Json?
   activo            Boolean   @default(true)
   abierto           Boolean   @default(false)

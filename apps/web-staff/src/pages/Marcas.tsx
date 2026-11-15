@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Building2, Pencil, Plus, Trash2, UserPlus, MoveRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../components/Toast';
+import ColorPicker from '../components/ColorPicker';
 
 export default function Marcas() {
   const toast = useToast();
   const [marcas, setMarcas] = useState<any[]>([]);
-  const [marcaForm, setMarcaForm] = useState<{ id?: string; nombre: string } | null>(null);
+  const [marcaForm, setMarcaForm] = useState<{ id?: string; nombre: string; colorPrimario: string; colorMarca: string } | null>(null);
   const [masterForm, setMasterForm] = useState<{ marcaId: string; nombre: string; email: string; password: string } | null>(null);
   const [moverForm, setMoverForm] = useState<{ marcaId: string; marcaNombre: string; tenantId: string } | null>(null);
 
@@ -38,7 +39,7 @@ export default function Marcas() {
     if (!marcaForm?.nombre.trim()) return;
     try {
       if (marcaForm.id) {
-        await api(`/marcas/${marcaForm.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: marcaForm.nombre }) });
+        await api(`/marcas/${marcaForm.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: marcaForm.nombre, colorPrimario: marcaForm.colorPrimario, colorMarca: marcaForm.colorMarca }) });
       } else {
         await api('/marcas', { method: 'POST', body: JSON.stringify({ nombre: marcaForm.nombre }) });
       }
@@ -84,7 +85,7 @@ export default function Marcas() {
           <h1>Marcas y franquicias</h1>
           <div className="sub">Administra las marcas de la plataforma</div>
         </div>
-        <button className="btn primary" onClick={() => setMarcaForm({ nombre: '' })}>
+        <button className="btn primary" onClick={() => setMarcaForm({ nombre: '', colorPrimario: '#f5b301', colorMarca: '#ffffff' })}>
           <Plus size={16} /> Nueva marca
         </button>
       </div>
@@ -110,7 +111,7 @@ export default function Marcas() {
               <button className="btn sm" onClick={() => setMasterForm({ marcaId: m.id, nombre: '', email: '', password: '' })}>
                 <UserPlus size={14} /> Master
               </button>
-              <button className="btn sm" onClick={() => setMarcaForm({ id: m.id, nombre: m.nombre })}>
+              <button className="btn sm" onClick={() => setMarcaForm({ id: m.id, nombre: m.nombre, colorPrimario: m.colorPrimario || '#f5b301', colorMarca: m.colorMarca || '#ffffff' })}>
                 <Pencil size={13} />
               </button>
               {(!m.tenants || m.tenants.length === 0) && (
@@ -147,6 +148,8 @@ export default function Marcas() {
             <h2>{marcaForm.id ? 'Editar marca' : 'Nueva marca'}</h2>
             <label>Nombre de la marca</label>
             <input value={marcaForm.nombre} onChange={(e) => setMarcaForm({ ...marcaForm, nombre: e.target.value })} placeholder="La Noche" autoFocus />
+            <ColorPicker label="Color principal (botones y acentos)" value={marcaForm.colorPrimario} onChange={(c) => setMarcaForm({ ...marcaForm, colorPrimario: c })} />
+            <ColorPicker label="Color del nombre (letras)" value={marcaForm.colorMarca} onChange={(c) => setMarcaForm({ ...marcaForm, colorMarca: c })} />
             <button className="btn primary block" style={{ marginTop: 18 }} onClick={guardarMarca}>Guardar</button>
           </div>
         </div>

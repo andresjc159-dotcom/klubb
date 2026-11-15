@@ -51,10 +51,17 @@ export class MarcasController {
   }
 
   @Patch(':id')
-  async editar(@Param('id') id: string, @Body() body: { nombre?: string }) {
+  async editar(
+    @Param('id') id: string,
+    @Body() body: { nombre?: string; colorPrimario?: string; colorMarca?: string },
+  ) {
     return this.prisma.marca.update({
       where: { id },
-      data: { nombre: body.nombre },
+      data: {
+        nombre: body.nombre,
+        colorPrimario: body.colorPrimario,
+        colorMarca: body.colorMarca,
+      },
     });
   }
 

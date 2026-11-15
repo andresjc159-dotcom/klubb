@@ -123,13 +123,16 @@ export class LocalController {
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
-        colorPrimario: true,
-        colorMarca: true,
         apoyoHabilitado: true,
         umbralApoyo: true,
+        marca: { select: { colorPrimario: true, colorMarca: true } },
       },
     });
-    return tenant;
+    return {
+      ...tenant,
+      colorPrimario: tenant?.marca?.colorPrimario ?? '#f5b301',
+      colorMarca: tenant?.marca?.colorMarca ?? '#ffffff',
+    };
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -142,8 +145,6 @@ export class LocalController {
       nombre?: string;
       mensajeBienvenida?: string;
       direccion?: string;
-      colorPrimario?: string;
-      colorMarca?: string;
       apoyoHabilitado?: boolean;
       umbralApoyo?: number;
     },
@@ -154,8 +155,6 @@ export class LocalController {
         nombre: body.nombre,
         mensajeBienvenida: body.mensajeBienvenida,
         direccion: body.direccion,
-        colorPrimario: body.colorPrimario,
-        colorMarca: body.colorMarca,
         apoyoHabilitado: body.apoyoHabilitado,
         umbralApoyo:
           body.umbralApoyo != null ? Number(body.umbralApoyo) : undefined,
@@ -165,8 +164,6 @@ export class LocalController {
         logoUrl: true,
         mensajeBienvenida: true,
         direccion: true,
-        colorPrimario: true,
-        colorMarca: true,
         apoyoHabilitado: true,
         umbralApoyo: true,
       },
