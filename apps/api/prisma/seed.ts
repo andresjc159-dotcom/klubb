@@ -4,15 +4,22 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  const marca = await prisma.marca.upsert({
+    where: { slug: 'la-noche' },
+    update: {},
+    create: { nombre: 'La Noche', slug: 'la-noche' },
+  });
+
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'la-noche' },
-    update: { abierto: true },
+    update: { abierto: true, marcaId: marca.id },
     create: {
       nombre: 'La Noche Bar',
       slug: 'la-noche',
       mensajeBienvenida: '¡Bienvenido! Pide tus tragos sin filas',
       direccion: 'Medellín',
       abierto: true,
+      marcaId: marca.id,
     },
   });
 
@@ -23,8 +30,10 @@ async function main() {
     email: string;
     role: Role;
     tenantId: string | null;
+    marcaId?: string | null;
   }> = [
-    { nombre: 'Master', email: 'master@klubb.app', role: Role.MASTER, tenantId: null },
+    { nombre: 'Super', email: 'super@klubb.app', role: Role.SUPER, tenantId: null, marcaId: null },
+    { nombre: 'Master', email: 'master@klubb.app', role: Role.MASTER, tenantId: null, marcaId: marca.id },
     { nombre: 'Admin', email: 'admin@klubb.app', role: Role.ADMIN, tenantId: tenant.id },
     { nombre: 'Laura', email: 'laura@klubb.app', role: Role.MESERO, tenantId: tenant.id },
     { nombre: 'Juan', email: 'juan@klubb.app', role: Role.BARMAN, tenantId: tenant.id },

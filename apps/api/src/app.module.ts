@@ -21,6 +21,7 @@ import { ComprasModule } from './compras/compras.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
 import { BodegaModule } from './bodega/bodega.module';
 import { NominaModule } from './nomina/nomina.module';
+import { MarcasModule } from './marcas/marcas.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -47,6 +48,7 @@ import { AppController } from './app.controller';
     EncuestasModule,
     BodegaModule,
     NominaModule,
+    MarcasModule,
   ],
   controllers: [AppController],
 })

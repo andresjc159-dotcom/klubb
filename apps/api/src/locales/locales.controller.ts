@@ -27,8 +27,9 @@ export class LocalesController {
   ) {}
 
   @Get()
-  async list() {
+  async list(@Req() req: any) {
     return this.prisma.tenant.findMany({
+      where: { marcaId: req.user.marcaId },
       include: {
         _count: {
           select: { mesas: true, productos: true, usuarios: true, pedidos: true },
@@ -39,13 +40,17 @@ export class LocalesController {
   }
 
   @Get('consolidado')
-  async consolidado() {
+  async consolidado(@Req() req: any) {
     const tenants = await this.prisma.tenant.findMany({
+      where: { marcaId: req.user.marcaId },
       include: {
         _count: { select: { pedidos: true, mesas: true, usuarios: true } },
       },
     });
-    const pagos = await this.prisma.pago.findMany();
+    const tenantIds = tenants.map((t) => t.id);
+    const pagos = await this.prisma.pago.findMany({
+      where: { tenantId: { in: tenantIds } },
+    });
     const porLocal = tenants.map((t) => ({
       id: t.id,
       nombre: t.nombre,
@@ -63,7 +68,10 @@ export class LocalesController {
   }
 
   @Post()
-  async crear(@Body() body: { nombre: string; direccion?: string; plan?: string }) {
+  async crear(
+    @Req() req: any,
+    @Body() body: { nombre: string; direccion?: string; plan?: string },
+  ) {
     if (!body.nombre?.trim()) {
       throw new BadRequestException('El nombre es requerido');
     }
@@ -80,6 +88,7 @@ export class LocalesController {
         direccion: body.direccion,
         mensajeBienvenida: '¡Bienvenido! Pide tus tragos sin filas',
         plan: body.plan === 'BASICA' ? 'BASICA' : 'PRO',
+        marcaId: req.user.marcaId,
       },
     });
   }

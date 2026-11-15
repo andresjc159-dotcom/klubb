@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ChefHat,
   ClipboardList,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Martini,
@@ -55,6 +56,7 @@ export default function Layout() {
   const role = user?.role || '';
   const isMaster = role === 'MASTER';
   const esAdminPuro = role === 'ADMIN';
+  const isSuper = role === 'SUPER';
   const masterEnLocal = isMaster && !!user?.tenantActivoId;
   const operaLocal = esAdminPuro || masterEnLocal;
   const esPro = user?.plan !== 'BASICA';
@@ -91,6 +93,7 @@ export default function Layout() {
   }, [role, user]);
 
   const links: Link[] = [
+    { to: '/marcas', label: 'Marcas', Icon: Landmark, show: isSuper, end: true },
     { to: '/locales', label: 'Locales', Icon: Store, show: isMaster, end: true },
     { to: '/', label: 'Inicio', Icon: LayoutDashboard, show: operaLocal, end: true },
     { to: '/mesas', label: 'Mesas y QR', Icon: Armchair, show: operaLocal },

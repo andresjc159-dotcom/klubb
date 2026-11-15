@@ -83,6 +83,7 @@ export class AuthService {
       role: user.role,
       tenantId: user.tenantId,
       tenantActivoId: user.tenantActivoId,
+      marcaId: user.marcaId,
       nombre: user.nombre,
       plan,
     };
@@ -95,6 +96,7 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
         tenantActivoId: user.tenantActivoId,
+        marcaId: user.marcaId,
         plan,
       },
     };

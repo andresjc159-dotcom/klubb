@@ -11,6 +11,7 @@ import Caja from './pages/Caja';
 import Mesero from './pages/Mesero';
 import Dj from './pages/Dj';
 import Locales from './pages/Locales';
+import Marcas from './pages/Marcas';
 import Usuarios from './pages/Usuarios';
 import Insumos from './pages/Insumos';
 import Recetas from './pages/Recetas';
@@ -56,6 +57,7 @@ export default function App() {
             >
               <Route index element={<RoleRoute roles={['ADMIN', 'MASTER']}><Dashboard /></RoleRoute>} />
               <Route path="locales" element={<RoleRoute roles={['MASTER']}><Locales /></RoleRoute>} />
+              <Route path="marcas" element={<RoleRoute roles={['SUPER']}><Marcas /></RoleRoute>} />
               <Route path="mesas" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Mesas /></RoleRoute>} />
               <Route path="productos" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Productos /></RoleRoute>} />
               <Route path="insumos" element={<RoleRoute roles={['ADMIN', 'MASTER']}><Insumos /></RoleRoute>} />

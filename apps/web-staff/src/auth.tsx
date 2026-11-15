@@ -13,6 +13,7 @@ export interface AuthUser {
   role: string;
   tenantId?: string;
   tenantActivoId?: string;
+  marcaId?: string;
   nombre: string;
   plan?: string;
 }
@@ -78,6 +79,8 @@ export function useAuth() {
 
 export function homeForRole(role?: string): string {
   switch (role) {
+    case 'SUPER':
+      return '/marcas';
     case 'MASTER':
       return '/locales';
     case 'MESERO':
